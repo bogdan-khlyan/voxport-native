@@ -1,6 +1,6 @@
 // components/pages/settings/Settings.tsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, Pressable } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     Box,
@@ -8,8 +8,6 @@ import {
     HStack,
     Heading,
     Text,
-    Divider,
-    Switch,
     Button,
     ButtonText,
     Input,
@@ -21,33 +19,11 @@ import {
     FormControlLabelText,
     FormControlError,
     FormControlErrorText,
+    Icon,
 } from '@gluestack-ui/themed';
-import { STORAGE_KEYS } from '../auth/Auth';
+import { QrCode } from 'lucide-react-native';
 
-type Props = {
-    onLogout?: () => void;
-};
-
-type ThemeMode = 'system' | 'light' | 'dark';
-
-const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-    <VStack space="md">
-        <Heading size="sm">{title}</Heading>
-        <Box bg="$background0" borderWidth="$1" borderColor="$borderLight300" rounded="$2xl" p="$4">
-            {children}
-        </Box>
-    </VStack>
-);
-
-const Row: React.FC<{ label: string; hint?: string; right?: React.ReactNode }> = ({ label, hint, right }) => (
-    <VStack space="xs" mb="$3">
-        <HStack alignItems="center" justifyContent="space-between">
-            <Text size="md">{label}</Text>
-            {right}
-        </HStack>
-        {hint ? <Text size="xs" color="$textLight500">{hint}</Text> : null}
-    </VStack>
-);
+import { useUserStore, STORAGE_KEYS } from '@/api/user/user.store';
 
 const initials = (name?: string) =>
     (name || 'User')
@@ -58,89 +34,101 @@ const initials = (name?: string) =>
         .join('')
         .toUpperCase();
 
-export default function Settings({ onLogout }: Props) {
-    // Профиль (из Auth)
-    const [name, setName] = useState<string>('');
-    const [email, setEmail] = useState<string>('');
+export default function Settings() {
+    const { profile, patchProfile, logout, loading } = useUserStore();
+
+    // редактируемые значения
+    const [name, setName] = useState<string>(profile?.name ?? '');
+    const [email, setEmail] = useState<string>(profile?.email ?? '');
     const [savingProfile, setSavingProfile] = useState(false);
+    const [editMode, setEditMode] = useState(false);
 
-    // Аудио/Видео
-    const [startMuted, setStartMuted] = useState(false);
-    const [startVideoOff, setStartVideoOff] = useState(true);
-    const [useSpeaker, setUseSpeaker] = useState(true);
-    const [echoCancellation, setEchoCancellation] = useState(true);
-    const [camera, setCamera] = useState<'front' | 'back'>('front');
+    useEffect(() => {
+        setName(profile?.name ?? '');
+        setEmail(profile?.email ?? '');
+    }, [profile?.name, profile?.email]);
 
-    // Уведомления
-    const [pushEnabled, setPushEnabled] = useState(true);
-    const [ringtoneEnabled, setRingtoneEnabled] = useState(true);
-    const [vibrate, setVibrate] = useState(true);
-
-    // Интерфейс
-    const [theme, setTheme] = useState<ThemeMode>('system');
-    const themeLabel = useMemo(
-        () => ({ system: 'Системная', light: 'Светлая', dark: 'Тёмная' }[theme]),
-        [theme]
-    );
-
-    // Валидация профиля
     const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const nameErr = useMemo(() => (name.trim().length < 2 ? 'Минимум 2 символа' : ''), [name]);
     const emailErr = useMemo(() => (!EMAIL_RE.test(email.trim()) ? 'Некорректный email' : ''), [email]);
     const profileValid = !nameErr && !emailErr && !!name && !!email;
 
-    useEffect(() => {
-        (async () => {
-            const raw = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
-            if (raw) {
-                try {
-                    const p = JSON.parse(raw) as { name: string; email: string };
-                    setName(p?.name ?? '');
-                    setEmail(p?.email ?? '');
-                } catch {}
-            }
-        })();
-    }, []);
-
     const saveProfile = async () => {
         if (!profileValid || savingProfile) return;
         try {
             setSavingProfile(true);
-            await AsyncStorage.setItem(
-                STORAGE_KEYS.PROFILE,
-                JSON.stringify({ name: name.trim(), email: email.trim(), createdAt: new Date().toISOString() })
-            );
+            const next = { name: name.trim(), email: email.trim().toLowerCase() };
+            patchProfile(next);
+            const updated = { ...(profile ?? { id: 'unknown' }), ...next };
+            await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(updated));
+            setEditMode(false);
         } finally {
             setSavingProfile(false);
         }
     };
 
-    const handleLogout = async () => {
-        await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
-        onLogout?.();
+    const cancelEdit = () => {
+        setName(profile?.name ?? '');
+        setEmail(profile?.email ?? '');
+        setEditMode(false);
     };
 
-    const appVersion = '1.0.0';
-    const sdkVersion = 'Jitsi RN SDK — 11.x';
+    const handleChangePhoto = () => {
+        // тут позже подключишь выбор/съемку фото
+        // сейчас — заглушка
+    };
 
     return (
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 28 }}>
-            <VStack space="xl">
-                {/* Профиль */}
-                <Section title="Профиль">
-                    <HStack alignItems="center" space="md" mb="$4">
-                        <Avatar size="md" bg="$background200" borderWidth="$1" borderColor="$borderLight300">
-                            <AvatarFallbackText>{initials(name)}</AvatarFallbackText>
-                        </Avatar>
-                        <VStack>
-                            <Heading size="sm">{name || 'Без имени'}</Heading>
-                            <Text size="xs" color="$textLight500">{email || 'email не указан'}</Text>
-                        </VStack>
-                    </HStack>
+        <ScrollView contentContainerStyle={{ paddingBottom: 24, paddingTop: 60 }}>
+            {/* Верхняя "шапка" как в Telegram */}
+            <Box bg="$background50" px="$4" pt="$6" pb="$5" borderBottomWidth="$1" borderColor="$borderLight200">
+                {/* Линия с QR и "Изм." */}
+                <HStack justifyContent="space-between" alignItems="center" mb="$3">
+                    <Pressable onPress={() => { /* открой экран QR позже */ }}>
+                        <HStack alignItems="center" space="sm" opacity={0.9}>
+                            <Icon as={QrCode} size="lg" />
+                        </HStack>
+                    </Pressable>
 
+                    <Pressable onPress={() => setEditMode((v) => !v)}>
+                        <Text size="md" color="$primary700">{editMode ? 'Готово' : 'Изм.'}</Text>
+                    </Pressable>
+                </HStack>
+
+                {/* Аватар, имя, подзаголовок */}
+                <VStack alignItems="center" space="xs">
+                    <Avatar size="2xl" bg="$background200" borderWidth="$1" borderColor="$borderLight300">
+                        <AvatarFallbackText>{initials(name)}</AvatarFallbackText>
+                    </Avatar>
+                    <Heading size="xl" mt="$2">{name || 'Без имени'}</Heading>
+                    <Text size="sm" color="$textLight500">{email || 'email не указан'}</Text>
+                </VStack>
+            </Box>
+
+            {/* Кнопка "Изменить фотографию" — как плитка */}
+            <Box px="$4" pt="$3">
+                <Pressable onPress={handleChangePhoto}>
+                    <Box
+                        bg="$background0"
+                        borderWidth="$1"
+                        borderColor="$borderLight300"
+                        rounded="$2xl"
+                        px="$4"
+                        py="$3"
+                    >
+                        <Text size="md" color="$primary700">Изменить фотографию</Text>
+                    </Box>
+                </Pressable>
+            </Box>
+
+            {/* Редактирование полей (показываем только в editMode) */}
+            {editMode && (
+                <Box px="$4" mt="$4">
                     <VStack space="md">
                         <FormControl isInvalid={!!nameErr}>
-                            <FormControlLabel><FormControlLabelText>Имя</FormControlLabelText></FormControlLabel>
+                            <FormControlLabel>
+                                <FormControlLabelText>Имя</FormControlLabelText>
+                            </FormControlLabel>
                             <Input>
                                 <InputField
                                     value={name}
@@ -151,12 +139,16 @@ export default function Settings({ onLogout }: Props) {
                                 />
                             </Input>
                             {nameErr ? (
-                                <FormControlError><FormControlErrorText>{nameErr}</FormControlErrorText></FormControlError>
+                                <FormControlError>
+                                    <FormControlErrorText>{nameErr}</FormControlErrorText>
+                                </FormControlError>
                             ) : null}
                         </FormControl>
 
                         <FormControl isInvalid={!!emailErr}>
-                            <FormControlLabel><FormControlLabelText>Email</FormControlLabelText></FormControlLabel>
+                            <FormControlLabel>
+                                <FormControlLabelText>Email</FormControlLabelText>
+                            </FormControlLabel>
                             <Input>
                                 <InputField
                                     value={email}
@@ -168,7 +160,9 @@ export default function Settings({ onLogout }: Props) {
                                 />
                             </Input>
                             {emailErr ? (
-                                <FormControlError><FormControlErrorText>{emailErr}</FormControlErrorText></FormControlError>
+                                <FormControlError>
+                                    <FormControlErrorText>{emailErr}</FormControlErrorText>
+                                </FormControlError>
                             ) : null}
                         </FormControl>
 
@@ -182,102 +176,26 @@ export default function Settings({ onLogout }: Props) {
                             >
                                 <ButtonText>{savingProfile ? 'Сохраняю…' : 'Сохранить'}</ButtonText>
                             </Button>
-
-                            <Button
-                                variant="outline"
-                                action="negative"
-                                rounded="$2xl"
-                                onPress={handleLogout}
-                            >
-                                <ButtonText>Выйти</ButtonText>
+                            <Button variant="outline" rounded="$2xl" onPress={cancelEdit}>
+                                <ButtonText>Отмена</ButtonText>
                             </Button>
                         </HStack>
                     </VStack>
-                </Section>
+                </Box>
+            )}
 
-                {/* Аудио и видео */}
-                <Section title="Аудио и видео">
-                    <Row
-                        label="Входить с выключенным микрофоном"
-                        right={<Switch value={startMuted} onValueChange={setStartMuted} />}
-                    />
-                    <Row
-                        label="Входить с выключенным видео"
-                        right={<Switch value={startVideoOff} onValueChange={setStartVideoOff} />}
-                    />
-                    <Row
-                        label="Всегда использовать динамик"
-                        hint="Если выключено — при гарнитуре/наушниках звук уйдёт туда"
-                        right={<Switch value={useSpeaker} onValueChange={setUseSpeaker} />}
-                    />
-                    <Row
-                        label="Эхоподавление"
-                        right={<Switch value={echoCancellation} onValueChange={setEchoCancellation} />}
-                    />
-                    <Divider my="$2" />
-                    <Text size="md" mb="$2">Камера по умолчанию</Text>
-                    <HStack space="sm">
-                        <Button
-                            variant={camera === 'front' ? 'solid' : 'outline'}
-                            action={camera === 'front' ? 'primary' : 'secondary'}
-                            onPress={() => setCamera('front')}
-                            rounded="$2xl"
-                        >
-                            <ButtonText>Фронтальная</ButtonText>
-                        </Button>
-                        <Button
-                            variant={camera === 'back' ? 'solid' : 'outline'}
-                            action={camera === 'back' ? 'primary' : 'secondary'}
-                            onPress={() => setCamera('back')}
-                            rounded="$2xl"
-                        >
-                            <ButtonText>Тыловая</ButtonText>
-                        </Button>
-                    </HStack>
-                </Section>
-
-                {/* Уведомления */}
-                <Section title="Уведомления">
-                    <Row label="Push-уведомления" right={<Switch value={pushEnabled} onValueChange={setPushEnabled} />} />
-                    <Row label="Рингтон при входящем" right={<Switch value={ringtoneEnabled} onValueChange={setRingtoneEnabled} />} />
-                    <Row label="Вибрация" right={<Switch value={vibrate} onValueChange={setVibrate} />} />
-                </Section>
-
-                {/* Интерфейс */}
-                <Section title="Интерфейс">
-                    <Text size="md" mb="$2">Тема</Text>
-                    <HStack space="sm" mb="$1">
-                        {(['system', 'light', 'dark'] as ThemeMode[]).map((t) => (
-                            <Button
-                                key={t}
-                                variant={theme === t ? 'solid' : 'outline'}
-                                action={theme === t ? 'primary' : 'secondary'}
-                                onPress={() => setTheme(t)}
-                                rounded="$2xl"
-                            >
-                                <ButtonText>
-                                    {t === 'system' ? 'Системная' : t === 'light' ? 'Светлая' : 'Тёмная'}
-                                </ButtonText>
-                            </Button>
-                        ))}
-                    </HStack>
-                    <Text size="xs" color="$textLight500">Текущая: {themeLabel}</Text>
-                </Section>
-
-                {/* О приложении */}
-                <Section title="О приложении">
-                    <VStack space="sm">
-                        <HStack alignItems="center" justifyContent="space-between">
-                            <Text>Версия</Text>
-                            <Text color="$textLight500">{appVersion}</Text>
-                        </HStack>
-                        <HStack alignItems="center" justifyContent="space-between">
-                            <Text>Jitsi SDK</Text>
-                            <Text color="$textLight500">{sdkVersion}</Text>
-                        </HStack>
-                    </VStack>
-                </Section>
-            </VStack>
+            {/* Кнопка выхода — скромно внизу */}
+            <Box px="$4" mt="$6">
+                <Button
+                    variant="outline"
+                    action="negative"
+                    rounded="$2xl"
+                    isDisabled={loading}
+                    onPress={logout}
+                >
+                    <ButtonText>{loading ? 'Выход…' : 'Выйти'}</ButtonText>
+                </Button>
+            </Box>
         </ScrollView>
     );
 }

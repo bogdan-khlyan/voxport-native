@@ -1,16 +1,16 @@
+// babel.config.js
 module.exports = {
-  presets: [ 'module:@react-native/babel-preset' ],
-  env: {
-      production: {
-          plugins: [ 'react-native-paper/babel' ]
-      }
-  },
-
-  // This happens because react native has conflict with @babel/plugin-transform-private-methods plugin
-  // https://github.com/ethers-io/ethers.js/discussions/4309#discussioncomment-6694524
-  plugins: [ 'optional-require',
-      [ '@babel/plugin-transform-private-methods', {
-          'loose': true
-      } ]
-  ]
+    presets: ['module:@react-native/babel-preset'],
+    plugins: [
+        [
+            'module-resolver',
+            {
+                root: ['./src'],
+                alias: {
+                    '@': './src',
+                },
+                extensions: ['.ios.js', '.android.js', '.js', '.ts', '.tsx', '.json'],
+            },
+        ],
+    ],
 };

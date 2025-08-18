@@ -1,54 +1,30 @@
 // components/pages/auth/Auth.tsx
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     Box, VStack, Heading, Text,
     Input, InputField, Button, ButtonText,
     FormControl, FormControlLabel, FormControlLabelText,
-    FormControlError, FormControlErrorText,
-    HStack, Badge, BadgeText
+    HStack, Badge, BadgeText, FormControlError, FormControlErrorText
 } from '@gluestack-ui/themed';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Хук стора
+import { useUserStore } from '@/api/user/user.store'; // скорректируй путь, если нужно
 
-export type Profile = {
-    name: string;
-    email: string;
-    createdAt: string;
-};
+type Props = { onDone?: () => void };
 
-export const STORAGE_KEYS = {
-    PROFILE: 'app.profile',
-};
-
-type Props = {
-    onDone?: () => void; // вызываем после успешной авторизации
-};
-
-const Auth: React.FC<Props> = ({ onDone }) => {
-    const [name, setName]   = useState('');
+const Auth: React.FC<Props> = () => {
+    const [name, setName] = useState('');
     const [email, setEmail] = useState('');
-    const [busy, setBusy]   = useState(false);
 
-    const nameErr  = useMemo(() => (name.trim().length < 2 ? 'Минимум 2 символа' : ''), [name]);
-    const emailErr = useMemo(() => (!EMAIL_RE.test(email.trim()) ? 'Некорректный email' : ''), [email]);
-    const valid    = !nameErr && !emailErr && !!name && !!email;
+    // берём методы/состояние из стора
+    const { login, loading, error } = useUserStore();
 
-    const handleSubmit = async () => {
-        if (!valid || busy) return;
-        try {
-            setBusy(true);
-            const profile: Profile = {
-                name: name.trim(),
-                email: email.trim().toLowerCase(),
-                createdAt: new Date().toISOString(),
-            };
-            await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-            onDone?.();
-        } finally {
-            setBusy(false);
-        }
+    const handleSubmit = () => {
+        // Принимаем любые креды — просто инициируем login(thunk).
+        // Сервис вернёт тестового пользователя voxport/test@voxport.net.
+        login({ email: email || 'any@any', password: name || 'any' });
+        // onDone не нужен: редирект произойдёт через RootGate по isAuthed из стора
     };
 
     return (
@@ -68,7 +44,7 @@ const Auth: React.FC<Props> = ({ onDone }) => {
                     </VStack>
 
                     <VStack space="md">
-                        <FormControl isInvalid={!!nameErr}>
+                        <FormControl>
                             <FormControlLabel><FormControlLabelText>Имя</FormControlLabelText></FormControlLabel>
                             <Input>
                                 <InputField
@@ -79,12 +55,9 @@ const Auth: React.FC<Props> = ({ onDone }) => {
                                     returnKeyType="next"
                                 />
                             </Input>
-                            {nameErr ? (
-                                <FormControlError><FormControlErrorText>{nameErr}</FormControlErrorText></FormControlError>
-                            ) : null}
                         </FormControl>
 
-                        <FormControl isInvalid={!!emailErr}>
+                        <FormControl>
                             <FormControlLabel><FormControlLabelText>Email</FormControlLabelText></FormControlLabel>
                             <Input>
                                 <InputField
@@ -96,24 +69,26 @@ const Auth: React.FC<Props> = ({ onDone }) => {
                                     returnKeyType="done"
                                 />
                             </Input>
-                            {emailErr ? (
-                                <FormControlError><FormControlErrorText>{emailErr}</FormControlErrorText></FormControlError>
-                            ) : null}
                         </FormControl>
+
+                        {error ? (
+                            <FormControlError>
+                                <FormControlErrorText>{String(error)}</FormControlErrorText>
+                            </FormControlError>
+                        ) : null}
                     </VStack>
 
                     <Button
                         size="md"
                         rounded="$2xl"
-                        isDisabled={!valid || busy}
+                        isDisabled={loading}
                         onPress={handleSubmit}
                     >
-                        <ButtonText>{busy ? 'Сохраняю…' : 'Продолжить'}</ButtonText>
+                        <ButtonText>{loading ? 'Входим…' : 'Продолжить'}</ButtonText>
                     </Button>
 
                     <Text size="xs" color="$textLight500">
-                        Данные сохраняются только на устройстве.
-                        Изменить их можно в «Настройках».
+                        Данные сохраняются только на устройстве. Изменить их можно в «Настройках».
                     </Text>
                 </VStack>
             </Box>

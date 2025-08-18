@@ -1,8 +1,7 @@
 // App.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Gluestack
 import { GluestackUIProvider, Box, Text } from '@gluestack-ui/themed';
@@ -12,31 +11,27 @@ import { config } from '@gluestack-ui/config';
 // Экраны
 import Meeting from './components/pages/meeting/Meeting';
 import Login from './components/pages/login/Login';
-import Auth, { STORAGE_KEYS } from './components/pages/auth/Auth';
+import Auth from './components/pages/auth/Auth';
 
-// Навигатор вкладок (наш вынесенный компонент)
+// Навигатор вкладок
 import TabsNav from "./components/layouts/TabsNav";
+
+// Redux
+import { Provider } from 'react-redux';
+import { store, useUserStore } from './api/user/user.store';
 
 const RootStack = createStackNavigator();
 
-// --- Гейт авторизации ---
+// --- Гейт авторизации на Redux ---
 function RootGate() {
-    const [ready, setReady] = useState(false);
-    const [hasProfile, setHasProfile] = useState(false);
+    const { hydrating, isAuthed, hydrate } = useUserStore();
 
     useEffect(() => {
-        (async () => {
-            try {
-                const raw = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
-                setHasProfile(!!raw);
-                setHasProfile(false);
-            } finally {
-                setReady(true);
-            }
-        })();
-    }, []);
+        // Гидратация профиля из AsyncStorage при старте
+        hydrate();
+    }, [hydrate]);
 
-    if (!ready) {
+    if (hydrating) {
         return (
             <Box flex={1} alignItems="center" justifyContent="center">
                 <Text>Загрузка…</Text>
@@ -44,26 +39,29 @@ function RootGate() {
         );
     }
 
-    return hasProfile ? <TabsNav /> : <Auth onDone={() => setHasProfile(true)} />;
+    // Если твой Auth уже сам диспатчит login(thunk), проп onDone не нужен.
+    // Если в Auth всё ещё ждёшь onDone — передаём no-op, чтобы не падало.
+    return isAuthed ? (
+        <TabsNav />
+    ) : (
+        <Auth onDone={() => { /* no-op: переход произойдёт по изменению isAuthed */ }} />
+    );
 }
 
 export default function App() {
     return (
-        <StyledProvider config={config}>
-            <GluestackUIProvider config={config}>
-                <NavigationContainer theme={DefaultTheme}>
-                    <RootStack.Navigator initialRouteName="Gate" screenOptions={{ headerShown: false }}>
-                        {/* Гейт: Auth при первом запуске, иначе Tabs */}
-                        <RootStack.Screen name="Gate" component={RootGate} />
-
-                        {/* Экран звонка поверх вкладок */}
-                        <RootStack.Screen name="Meeting" component={Meeting} options={{ presentation: 'modal' }} />
-
-                        {/* Доп. экраны */}
-                        <RootStack.Screen name="Login" component={Login} />
-                    </RootStack.Navigator>
-                </NavigationContainer>
-            </GluestackUIProvider>
-        </StyledProvider>
+        <Provider store={store}>
+            <StyledProvider config={config}>
+                <GluestackUIProvider config={config}>
+                    <NavigationContainer theme={DefaultTheme}>
+                        <RootStack.Navigator initialRouteName="Gate" screenOptions={{ headerShown: false }}>
+                            <RootStack.Screen name="Gate" component={RootGate} />
+                            <RootStack.Screen name="Meeting" component={Meeting} options={{ presentation: 'modal' }} />
+                            <RootStack.Screen name="Login" component={Login} />
+                        </RootStack.Navigator>
+                    </NavigationContainer>
+                </GluestackUIProvider>
+            </StyledProvider>
+        </Provider>
     );
 }
