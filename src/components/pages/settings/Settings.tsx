@@ -24,6 +24,7 @@ import {
 import { QrCode } from 'lucide-react-native';
 
 import { useUserStore, STORAGE_KEYS } from '@/api/user/user.store';
+import BaseAvatar from "@/components/common/BaseAvatar";
 
 const initials = (name?: string) =>
     (name || 'User')
@@ -97,9 +98,7 @@ export default function Settings() {
 
                 {/* Аватар, имя, подзаголовок */}
                 <VStack alignItems="center" space="xs">
-                    <Avatar size="2xl" bg="$background200" borderWidth="$1" borderColor="$borderLight300">
-                        <AvatarFallbackText>{initials(name)}</AvatarFallbackText>
-                    </Avatar>
+                    <BaseAvatar fallback={initials(name)} size="xl"/>
                     <Heading size="xl" mt="$2">{name || 'Без имени'}</Heading>
                     <Text size="sm" color="$textLight500">{email || 'email не указан'}</Text>
                 </VStack>

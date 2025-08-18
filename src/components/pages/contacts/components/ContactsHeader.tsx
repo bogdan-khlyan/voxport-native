@@ -24,7 +24,12 @@ const ContactsHeader: React.FC<Props> = ({
                                              onInvite,
                                          }) => {
     return (
-        <VStack px="$4" space="md">
+        <VStack
+            px="$4"
+            space="md"
+            pt={10}
+            backgroundColor="#FFF"
+        >
             {/* Заголовок + действия */}
             <HStack alignItems="center" justifyContent="space-between">
                 <Heading size="xl">{title}</Heading>
@@ -50,10 +55,6 @@ const ContactsHeader: React.FC<Props> = ({
                         autoCapitalize="none"
                     />
                 </Input>
-                <HStack alignItems="center" justifyContent="space-between">
-                    <Text color="$textLight700">Показывать только online</Text>
-                    <Switch value={onlyOnline} onValueChange={onToggleOnline} />
-                </HStack>
             </VStack>
 
             <Divider />

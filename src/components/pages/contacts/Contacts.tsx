@@ -1,6 +1,14 @@
 import React, { useMemo, useState, useCallback } from 'react';
-import { Box, VStack, HStack, Heading, Text, Divider, Switch, Pressable, Spinner } from '@gluestack-ui/themed';
 import { SectionList, RefreshControl } from 'react-native';
+import {
+    Box,
+    VStack,
+    HStack,
+    Heading,
+    Text,
+    Pressable,
+    Spinner,
+} from '@gluestack-ui/themed';
 import Person from './components/Person';
 import { useNavigation } from '@react-navigation/native';
 import ContactsHeader from './components/ContactsHeader';
@@ -29,14 +37,15 @@ function groupByInitial(items: Contact[]) {
         if (!map.has(key)) map.set(key, []);
         map.get(key)!.push(c);
     }
-    const sections = Array.from(map.entries())
+    return Array.from(map.entries())
         .sort(([a], [b]) => a.localeCompare(b, 'ru'))
         .map(([title, data]) => ({
             title,
             data: data.sort((a, b) => a.name.localeCompare(b.name, 'ru')),
         }));
-    return sections;
 }
+
+const AVATAR_INSET = 72; // чтобы линия-разделитель начиналась под текстом (как в Telegram)
 
 const Contacts: React.FC = () => {
     const [query, setQuery] = useState('');
@@ -62,14 +71,8 @@ const Contacts: React.FC = () => {
         setRefreshing(false);
     }, []);
 
-    const onInvite = () => {
-        // навигация/экшен «Пригласить»
-        navigation.navigate('Contacts'); // при необходимости поменяйте
-    };
-
-    const onOpenProfile = (c: Contact) => {
-        navigation.navigate('Contact', { contact: c });
-    };
+    const onInvite = () => navigation.navigate('Contacts');
+    const onOpenProfile = (c: Contact) => navigation.navigate('Contact', { contact: c });
 
     return (
         <Box flex={1} bg="$backgroundLight" pt="$16">
@@ -87,20 +90,36 @@ const Contacts: React.FC = () => {
                 sections={sections}
                 keyExtractor={(item) => item.id}
                 stickySectionHeadersEnabled
+                showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
-                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
+                // без горизонтальных паддингов — строка сама их содержит
+                contentContainerStyle={{ paddingBottom: 24 }}
+
                 renderSectionHeader={({ section }) => (
-                    <Box bg="$backgroundLight0" py="$1" px="$2" mt="$3" borderRadius="$md">
-                        <Text bold>{section.title}</Text>
+                    <Box bg="$backgroundLight" px="$4" py="$2">
+                        <Text size="xs" color="$textLight500">{section.title}</Text>
                     </Box>
                 )}
+
                 renderItem={({ item }) => (
-                    <Pressable onPress={() => onOpenProfile(item)}>
+                    <Pressable
+                        onPress={() => onOpenProfile(item)}
+                        android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                        // iOS/общий pressed-эффект — лёгкая подсветка строки
+                        _pressed={{ bg: '$background50' }}
+                    >
                         <Person name={item.name} email={item.email} />
                     </Pressable>
                 )}
+
+                // тонкая инсет-линия между элементами, как в iOS/Telegram
+                ItemSeparatorComponent={() => (
+                    <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
+                )}
+
                 ListEmptyComponent={
                     loading ? (
                         <HStack mt="$10" justifyContent="center">
@@ -115,6 +134,7 @@ const Contacts: React.FC = () => {
                         </VStack>
                     )
                 }
+                ListFooterComponent={<Box h="$6" />}
             />
         </Box>
     );
