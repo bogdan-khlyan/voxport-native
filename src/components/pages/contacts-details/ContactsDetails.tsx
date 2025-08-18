@@ -106,7 +106,7 @@ const ContactDetails: React.FC = () => {
                         />
 
                         {/* Разделитель */}
-                        <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
+                        <Box height={1} bg="$borderLight200" />
 
                         {/* Быстрые действия */}
                         <ContactActions
@@ -116,13 +116,6 @@ const ContactDetails: React.FC = () => {
                             hasPhone={!!contact.phone}
                         />
 
-                        {/* Удаление */}
-                        <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
-                        <VStack px="$4" py="$4">
-                            <Button variant="outline" action="negative" onPress={confirmDelete}>
-                                <ButtonText>Удалить контакт</ButtonText>
-                            </Button>
-                        </VStack>
                     </VStack>
                 </Center>
             </KeyboardAvoidingView>
