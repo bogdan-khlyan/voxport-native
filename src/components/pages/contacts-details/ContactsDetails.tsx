@@ -1,19 +1,16 @@
-// components/ContactDetails.tsx
 import React from 'react';
-import { Platform, KeyboardAvoidingView } from 'react-native';
+import { Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
-    Box, VStack, HStack, Center,
-    Heading, Text, Divider,
-    Badge, BadgeText,
-    Avatar, AvatarFallbackText,
-    Button, ButtonText, Input, InputField,
+    Box, VStack, Center,
+    Heading, Text,
+    Button, ButtonText,
     Pressable,
     Actionsheet, ActionsheetBackdrop, ActionsheetContent,
-    ActionsheetHeader, ActionsheetBody, ActionsheetItem, ActionsheetItemText,
-    AlertDialog, AlertDialogBackdrop, AlertDialogContent, AlertDialogHeader,
-    AlertDialogBody, AlertDialogFooter,
 } from '@gluestack-ui/themed';
+import ContactDetailsHeader from "./components/ContactsDetailsHeader";
+import ContactProfile from "./components/ContactProfile";
+import ContactActions from "./components/ContactActions";
 
 type Contact = {
     id: string;
@@ -21,35 +18,27 @@ type Contact = {
     email: string;
     phone?: string;
     online?: boolean;
-    tags?: string[];
-    note?: string;
-    lastSeenAt?: string; // ISO
 };
 
-type RootStackParamList = {
-    Contact: { contact: Contact };
-    Meeting: { room: string };
-    Chat: { contactId: string };
-};
+type ContactRouteParams = { contact: Contact };
 
-type ContactRouteParams = RootStackParamList['Contact'] | undefined;
+const AVATAR_INSET = 72;
 
 const ContactDetails: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>() as { params?: ContactRouteParams };
 
-    const contact = route?.params?.contact;
+    const contact = route.params?.contact;
 
-    // Фолбэк, если пришли без параметров
     if (!contact) {
         return (
-            <Box flex={1} bg="$backgroundDark950">
+            <Box flex={1} bg="$backgroundLight">
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <Center flex={1} px="$5">
                         <VStack space="md" alignItems="center">
-                            <Heading size="xl" color="$textDark50">Контакт не передан</Heading>
-                            <Text color="$textDark300" textAlign="center">
-                                Экран «ContactDetails» требует параметр <Text bold>contact</Text>, но он не был передан.
+                            <Heading size="xl">Контакт не передан</Heading>
+                            <Text textAlign="center">
+                                Экран <Text bold>ContactDetails</Text> требует параметр <Text bold>contact</Text>, но он не был передан.
                             </Text>
                             <Button onPress={() => navigation.goBack()}>
                                 <ButtonText>Назад</ButtonText>
@@ -61,10 +50,7 @@ const ContactDetails: React.FC = () => {
         );
     }
 
-    const [note, setNote] = React.useState(contact.note ?? '');
-    const [saving, setSaving] = React.useState(false);
     const [menuOpen, setMenuOpen] = React.useState(false);
-    const [confirmOpen, setConfirmOpen] = React.useState(false);
 
     const initials = React.useMemo(
         () =>
@@ -77,143 +63,63 @@ const ContactDetails: React.FC = () => {
         [contact.name]
     );
 
-    const statusBadge = (
-        <Badge action={contact.online ? 'success' : 'muted'} px="$2" py="$1" borderRadius="$full">
-            <BadgeText>{contact.online ? 'online' : 'offline'}</BadgeText>
-        </Badge>
-    );
-
     const onStartMeeting = () => {
         const room = `vox-${contact.id}`;
         navigation.navigate('Meeting', { room });
     };
 
-    const onMessage = () => {
-        navigation.navigate('Chat', { contactId: contact.id });
-    };
+    const onMessage = () => navigation.navigate('Chat', { contactId: contact.id });
 
-    const onCall = () => {
-        // пример: Linking.openURL(`tel:${contact.phone}`)
-    };
+    const onCall = () => { /* Linking.openURL(`tel:${contact.phone}`) */ };
 
-    const onSaveNote = async () => {
-        setSaving(true);
-        try {
-            // TODO: вызов API сохранения заметки
-            await new Promise(r => setTimeout(r, 500));
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    const onDeleteContact = async () => {
-        setConfirmOpen(false);
-        // TODO: удаление контакта через API
+    const onDeleteContact = () => {
+        // TODO: вызов API удаления
         navigation.goBack();
     };
 
+    const confirmDelete = () => {
+        Alert.alert(
+            'Удалить контакт?',
+            'Это действие нельзя отменить.',
+            [
+                { text: 'Отмена', style: 'cancel' },
+                { text: 'Удалить', style: 'destructive', onPress: onDeleteContact },
+            ]
+        );
+    };
+
     return (
-        <Box flex={1} bg="$backgroundDark950">
+        <Box flex={1} bg="$backgroundLight">
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-                <Center px="$5" pt="60">
-                    <VStack w="100%" maxWidth={560} space="lg">
+                {/* Топ-бар */}
+                <ContactDetailsHeader onMenuOpen={() => setMenuOpen(true)} />
 
-                        {/* Шапка */}
-                        <HStack alignItems="center" justifyContent="space-between">
-                            <Button variant="outline" size="sm" onPress={() => navigation.goBack()}>
-                                <ButtonText>Назад</ButtonText>
-                            </Button>
-                            <Pressable onPress={() => setMenuOpen(true)}>
-                                <Text color="$textDark300">Ещё</Text>
-                            </Pressable>
-                        </HStack>
-
+                <Center px="$4">
+                    <VStack w="100%" maxWidth={560}>
                         {/* Профиль */}
-                        <Center>
-                            <Avatar size="xl" bg="$backgroundDark900" borderWidth={1} borderColor="$borderDark700">
-                                <AvatarFallbackText>{initials}</AvatarFallbackText>
-                            </Avatar>
-                            <VStack alignItems="center" mt="$3" space="xs">
-                                <Heading size="xl" color="$textDark50" textAlign="center">{contact.name}</Heading>
-                                <Text color="$textDark300">{contact.email}</Text>
-                                {contact.phone ? <Text color="$textDark400">{contact.phone}</Text> : null}
-                                {statusBadge}
-                            </VStack>
-                        </Center>
+                        <ContactProfile
+                            name={contact.name}
+                            email={contact.email}
+                            phone={contact.phone}
+                            online={contact.online}
+                            initials={initials}
+                        />
+
+                        {/* Разделитель */}
+                        <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
 
                         {/* Быстрые действия */}
-                        <HStack space="sm" justifyContent="center">
-                            <Button size="lg" onPress={onMessage}>
-                                <ButtonText>Написать</ButtonText>
-                            </Button>
-                            <Button size="lg" variant="outline" onPress={onCall} isDisabled={!contact.phone}>
-                                <ButtonText>Позвонить</ButtonText>
-                            </Button>
-                            <Button size="lg" action="primary" onPress={onStartMeeting}>
-                                <ButtonText>Встреча</ButtonText>
-                            </Button>
-                        </HStack>
+                        <ContactActions
+                            onMessage={onMessage}
+                            onCall={onCall}
+                            onStartMeeting={onStartMeeting}
+                            hasPhone={!!contact.phone}
+                        />
 
-                        <Divider bg="$borderDark700" />
-
-                        {/* Теги (через Badge как чипы) */}
-                        {!!contact.tags?.length && (
-                            <VStack space="sm">
-                                <Heading size="md" color="$textDark200">Теги</Heading>
-                                <HStack space="sm" flexWrap="wrap">
-                                    {contact.tags.map(tag => (
-                                        <Badge
-                                            key={tag}
-                                            action="muted"
-                                            bg="$backgroundDark900"
-                                            borderColor="$borderDark700"
-                                            borderWidth={1}
-                                            px="$2"
-                                            py="$1"
-                                            borderRadius="$full"
-                                        >
-                                            <BadgeText color="$textDark300">#{tag}</BadgeText>
-                                        </Badge>
-                                    ))}
-                                </HStack>
-                            </VStack>
-                        )}
-
-                        {/* Заметка */}
-                        <VStack space="sm">
-                            <Heading size="md" color="$textDark200">Заметка</Heading>
-                            <Input bg="$backgroundDark900" borderColor="$borderDark700">
-                                <InputField
-                                    value={note}
-                                    onChangeText={setNote}
-                                    placeholder="Добавьте заметку…"
-                                    placeholderTextColor="#8b8b8b"
-                                    style={{ color: 'white' }}
-                                    multiline
-                                />
-                            </Input>
-                            <HStack justifyContent="flex-end">
-                                <Button size="sm" isDisabled={saving} onPress={onSaveNote}>
-                                    <ButtonText>{saving ? 'Сохранение…' : 'Сохранить'}</ButtonText>
-                                </Button>
-                            </HStack>
-                        </VStack>
-
-                        {/* Активность */}
-                        <VStack space="sm">
-                            <Heading size="md" color="$textDark200">Активность</Heading>
-                            {contact.lastSeenAt ? (
-                                <Text color="$textDark400">
-                                    Последний визит: {new Date(contact.lastSeenAt).toLocaleString()}
-                                </Text>
-                            ) : (
-                                <Text color="$textDark500">Нет данных об активности</Text>
-                            )}
-                        </VStack>
-
-                        {/* Низ страницы */}
-                        <VStack space="sm" mt="$4">
-                            <Button variant="outline" action="negative" onPress={() => setConfirmOpen(true)}>
+                        {/* Удаление */}
+                        <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
+                        <VStack px="$4" py="$4">
+                            <Button variant="outline" action="negative" onPress={confirmDelete}>
                                 <ButtonText>Удалить контакт</ButtonText>
                             </Button>
                         </VStack>
@@ -225,45 +131,23 @@ const ContactDetails: React.FC = () => {
             <Actionsheet isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
                 <ActionsheetBackdrop />
                 <ActionsheetContent>
-                    <ActionsheetHeader>
+                    <VStack p="$4" space="md">
                         <Heading size="md">Действия</Heading>
-                    </ActionsheetHeader>
-                    <ActionsheetBody>
-                        <ActionsheetItem onPress={() => { /* TODO: поделиться контактом */ setMenuOpen(false); }}>
-                            <ActionsheetItemText>Поделиться</ActionsheetItemText>
-                        </ActionsheetItem>
-                        <ActionsheetItem onPress={() => { /* TODO: экспорт */ setMenuOpen(false); }}>
-                            <ActionsheetItemText>Экспорт</ActionsheetItemText>
-                        </ActionsheetItem>
-                        <ActionsheetItem onPress={() => { setMenuOpen(false); setConfirmOpen(true); }}>
-                            <ActionsheetItemText>Удалить…</ActionsheetItemText>
-                        </ActionsheetItem>
-                    </ActionsheetBody>
+
+                        <Pressable onPress={() => { setMenuOpen(false); /* поделиться */ }}>
+                            <Text>Поделиться</Text>
+                        </Pressable>
+
+                        <Pressable onPress={() => { setMenuOpen(false); /* экспорт */ }}>
+                            <Text>Экспорт</Text>
+                        </Pressable>
+
+                        <Pressable onPress={() => { setMenuOpen(false); confirmDelete(); }}>
+                            <Text color="$red600">Удалить…</Text>
+                        </Pressable>
+                    </VStack>
                 </ActionsheetContent>
             </Actionsheet>
-
-            {/* Подтверждение удаления */}
-            <AlertDialog isOpen={confirmOpen} onClose={() => setConfirmOpen(false)}>
-                <AlertDialogBackdrop />
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <Heading size="lg">Удалить контакт?</Heading>
-                    </AlertDialogHeader>
-                    <AlertDialogBody>
-                        <Text>Это действие нельзя отменить.</Text>
-                    </AlertDialogBody>
-                    <AlertDialogFooter>
-                        <HStack space="sm" justifyContent="flex-end">
-                            <Button variant="outline" onPress={() => setConfirmOpen(false)}>
-                                <ButtonText>Отмена</ButtonText>
-                            </Button>
-                            <Button action="negative" onPress={onDeleteContact}>
-                                <ButtonText>Удалить</ButtonText>
-                            </Button>
-                        </HStack>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </Box>
     );
 };
