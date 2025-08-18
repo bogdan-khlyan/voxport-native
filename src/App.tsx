@@ -12,6 +12,7 @@ import { config } from '@gluestack-ui/config';
 import Meeting from './components/pages/meeting/Meeting';
 import Login from './components/pages/login/Login';
 import Auth from './components/pages/auth/Auth';
+import Invite from './components/pages/invite/Invite';
 
 // Навигатор вкладок
 import TabsNav from "./components/layouts/TabsNav";
@@ -58,6 +59,11 @@ export default function App() {
                             <RootStack.Screen name="Gate" component={RootGate} />
                             <RootStack.Screen name="Meeting" component={Meeting} options={{ presentation: 'modal' }} />
                             <RootStack.Screen name="Login" component={Login} />
+                            <RootStack.Screen
+                                name="Invite"
+                                component={Invite}
+                                options={{ presentation: 'modal', headerShown: false }}
+                            />
                         </RootStack.Navigator>
                     </NavigationContainer>
                 </GluestackUIProvider>

@@ -71,7 +71,7 @@ const Contacts: React.FC = () => {
         setRefreshing(false);
     }, []);
 
-    const onInvite = () => navigation.navigate('Contacts');
+    const onInvite = () => navigation.navigate('Invite');
     const onOpenProfile = (c: Contact) => navigation.navigate('Contact', { contact: c });
 
     return (
