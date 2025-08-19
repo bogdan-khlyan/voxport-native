@@ -1,8 +1,10 @@
 import React from 'react';
 import {
     Box, VStack, HStack, Heading, Text, Divider,
-    Input, InputField, Button, ButtonText, Badge, BadgeText, Switch
+    Input, InputField, Button, ButtonText, Badge, BadgeText, Switch, Icon
 } from '@gluestack-ui/themed';
+import BaseInput from "@/components/common/BaseInput";
+import {Search} from "lucide-react-native";
 
 type Props = {
     title?: string;
@@ -28,17 +30,27 @@ const ContactsHeader: React.FC<Props> = ({
             px="$4"
             space="md"
             pt={10}
-            backgroundColor="#FFF"
+            backgroundColor="rgba(255, 255, 255, 0.10)"
         >
             {/* Заголовок + действия */}
             <HStack alignItems="center" justifyContent="space-between">
-                <Heading size="xl">{title}</Heading>
                 <HStack space="sm" alignItems="center">
+                    <Heading size="xl">
+                        {title}
+                    </Heading>
                     <Badge action="muted">
                         <BadgeText>{count}</BadgeText>
                     </Badge>
+                </HStack>
+                <HStack space="sm" alignItems="center">
                     {!!onInvite && (
-                        <Button size="sm" onPress={onInvite}>
+                        <Button
+                            size="sm"
+                            onPress={onInvite}
+                            style={{
+                                borderRadius: 50
+                            }}
+                        >
                             <ButtonText>Пригласить</ButtonText>
                         </Button>
                     )}
@@ -47,14 +59,15 @@ const ContactsHeader: React.FC<Props> = ({
 
             {/* Поиск + фильтр Online */}
             <VStack space="sm">
-                <Input>
-                    <InputField
-                        placeholder="Поиск по имени или email"
-                        value={query}
-                        onChangeText={onQueryChange}
-                        autoCapitalize="none"
-                    />
-                </Input>
+                <BaseInput
+                    placeholder="Поиск по имени или email"
+                    value={query}
+                    onChangeText={onQueryChange}
+                    leftIcon={<Icon as={Search} size="sm" />}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    clearable
+                />
             </VStack>
 
             <Divider />

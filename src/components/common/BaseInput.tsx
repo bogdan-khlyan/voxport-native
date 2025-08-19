@@ -1,5 +1,9 @@
 import React, { forwardRef, memo, useMemo, useState } from 'react';
-import { NativeSyntheticEvent, TextInputChangeEventData } from 'react-native';
+import {
+    NativeSyntheticEvent,
+    TextInputChangeEventData,
+    TextInputSubmitEditingEventData,
+} from 'react-native';
 import {
     Input,
     InputField,
@@ -108,9 +112,11 @@ const BaseInput = memo(
             },
             ref
         ) => {
+            // --- background & borderless style
+            const FIELD_BG = 'rgba(118, 118, 128, 0.10)';
+
             const isControlled = typeof value === 'string';
             const [inner, setInner] = useState<string>(defaultValue ?? '');
-
             const text = isControlled ? (value as string) : inner;
 
             const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -122,6 +128,21 @@ const BaseInput = memo(
                 if (!isControlled) setInner(t);
                 onChangeText?.(t);
             };
+
+            // merge external input styles, but enforce bg + no border
+            const { style: inputStyle, ...restInputProps } = inputProps ?? {};
+            const inputStyleCombined = useMemo(
+                () => [
+                    {
+                        backgroundColor: FIELD_BG,
+                        borderWidth: 0,
+                        borderColor: 'transparent',
+                        borderRadius: 10,
+                    },
+                    inputStyle,
+                ],
+                [inputStyle]
+            );
 
             const trailingControls = useMemo(() => {
                 // Spinner wins
@@ -170,10 +191,15 @@ const BaseInput = memo(
                         size={size}
                         isDisabled={isDisabled}
                         isInvalid={hasError}
-                        {...inputProps}
+                        style={inputStyleCombined}
+                        {...restInputProps}
                     >
                         {/* Left icon */}
-                        {leftIcon ? <HStack alignItems="center" pl="$2">{leftIcon}</HStack> : null}
+                        {leftIcon ? (
+                            <HStack alignItems="center" pl="$2">
+                                {leftIcon}
+                            </HStack>
+                        ) : null}
 
                         <InputField
                             value={text}
@@ -187,13 +213,19 @@ const BaseInput = memo(
                             autoCapitalize={autoCapitalize}
                             autoCorrect={autoCorrect}
                             returnKeyType={returnKeyType}
-                            onSubmitEditing={onSubmitEditing as unknown as (e: NativeSyntheticEvent<TextInputChangeEventData>) => void}
+                            onSubmitEditing={
+                                onSubmitEditing as unknown as (
+                                    e: NativeSyntheticEvent<TextInputSubmitEditingEventData>
+                                ) => void
+                            }
                             testID={testID}
                         />
 
                         {/* Right controls (spinner / clear / eye / custom) */}
                         {trailingControls ? (
-                            <HStack pr="$2" alignItems="center">{trailingControls}</HStack>
+                            <HStack pr="$2" alignItems="center">
+                                {trailingControls}
+                            </HStack>
                         ) : null}
                     </Input>
 
