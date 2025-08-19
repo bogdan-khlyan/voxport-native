@@ -49,12 +49,25 @@ function RootGate() {
     );
 }
 
+const theme =  {
+    dark: false,
+    colors: {
+        primary: 'rgb(0, 122, 255)',
+        // background: 'rgb(242, 242, 242)',
+        background: '#FFFFFF',
+        card: 'rgb(255, 255, 255)',
+        text: 'rgb(28, 28, 30)',
+        border: 'rgb(216, 216, 216)',
+        notification: 'rgb(255, 59, 48)',
+    },
+}
+
 export default function App() {
     return (
         <Provider store={store}>
             <StyledProvider config={config}>
                 <GluestackUIProvider config={config}>
-                    <NavigationContainer theme={DefaultTheme}>
+                    <NavigationContainer theme={theme}>
                         <RootStack.Navigator initialRouteName="Gate" screenOptions={{ headerShown: false }}>
                             <RootStack.Screen name="Gate" component={RootGate} />
                             <RootStack.Screen name="Meeting" component={Meeting} options={{ presentation: 'modal' }} />

@@ -1,4 +1,3 @@
-// components/pages/calls/Calls.tsx
 import React from 'react';
 import { FlatList } from 'react-native';
 import { Box, VStack, Heading } from '@gluestack-ui/themed';
@@ -12,7 +11,7 @@ const MOCK_CALLS: CallItemData[] = [
         username: 'alice',
         type: 'video',
         status: 'incoming',
-        date: '2025-08-18 12:45',
+        date: '12:45',
     },
     {
         id: '2',
@@ -20,7 +19,7 @@ const MOCK_CALLS: CallItemData[] = [
         username: 'anton',
         type: 'audio',
         status: 'missed',
-        date: '2025-08-17 20:10',
+        date: 'Вчера',
     },
     {
         id: '3',
@@ -28,7 +27,7 @@ const MOCK_CALLS: CallItemData[] = [
         username: 'charles',
         type: 'video',
         status: 'outgoing',
-        date: '2025-08-17 09:30',
+        date: '17.08',
     },
 ];
 
@@ -36,9 +35,11 @@ export default function Calls() {
     const navigation = useNavigation<any>();
 
     return (
-        <Box flex={1} p="$4" pt="$16">
-            <VStack space="md" flex={1}>
-                <Heading>Звонки</Heading>
+        <Box flex={1} bg="$backgroundLight0" pt="60">
+            <VStack flex={1}>
+                <Heading px="$4" py="$3" size="md">
+                    Звонки
+                </Heading>
 
                 <FlatList
                     data={MOCK_CALLS}
@@ -54,7 +55,6 @@ export default function Calls() {
                                 });
                             }}
                             onPressRow={(call) => {
-                                // пример: открыть детали контакта
                                 // navigation.navigate('Contact', { id: call.username });
                             }}
                         />
