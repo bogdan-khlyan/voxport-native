@@ -20,9 +20,8 @@ const Person: React.FC<PersonProps> = ({ name, email }) => {
             py="$3"
             alignItems="center"
             space="md"
-            borderBottomWidth={1}
-            backgroundColor="#FFF"
-            borderColor="$borderLight200"
+            backgroundColor="#F5F5F5"
+            borderRadius="$lg"
         >
             <BaseAvatar fallback="SM" size="sm" />
             <VStack flex={1}>

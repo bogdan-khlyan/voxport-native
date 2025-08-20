@@ -96,11 +96,25 @@ const Contacts: React.FC = () => {
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
                 // без горизонтальных паддингов — строка сама их содержит
-                contentContainerStyle={{ paddingBottom: 24 }}
+                contentContainerStyle={{
+                    paddingBottom: 24,
+                    paddingLeft: 16,
+                    paddingRight: 16,
+                }}
 
                 renderSectionHeader={({ section }) => (
-                    <Box bg="$backgroundLight" px="$4" py="$2">
-                        <Text size="xs" color="$textLight500">{section.title}</Text>
+                    <Box bg="$backgroundLight" py="$2">
+                        <Text
+                            sx={{
+                                color: "#000",
+                                fontSize: 17,
+                                fontStyle: "normal",
+                                fontWeight: "600",
+                                lineHeight: 22,
+                            }}
+                        >
+                            {section.title}
+                        </Text>
                     </Box>
                 )}
 
@@ -117,7 +131,7 @@ const Contacts: React.FC = () => {
 
                 // тонкая инсет-линия между элементами, как в iOS/Telegram
                 ItemSeparatorComponent={() => (
-                    <Box ml={AVATAR_INSET} height={1} bg="$borderLight200" />
+                    <Box ml={AVATAR_INSET} height={1} bg="#DBDBDC" />
                 )}
 
                 ListEmptyComponent={
