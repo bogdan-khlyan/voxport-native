@@ -95,21 +95,21 @@ const Contacts: React.FC = () => {
                 refreshControl={
                     <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
                 }
-                // без горизонтальных паддингов — строка сама их содержит
                 contentContainerStyle={{
                     paddingBottom: 24,
                     paddingLeft: 16,
                     paddingRight: 16,
                 }}
 
+                // Хедер как и был — ТОЛЬКО буква, без фона блока
                 renderSectionHeader={({ section }) => (
                     <Box bg="$backgroundLight" py="$2">
                         <Text
                             sx={{
-                                color: "#000",
+                                color: '#000',
                                 fontSize: 17,
-                                fontStyle: "normal",
-                                fontWeight: "600",
+                                fontStyle: 'normal',
+                                fontWeight: '600',
                                 lineHeight: 22,
                             }}
                         >
@@ -118,20 +118,34 @@ const Contacts: React.FC = () => {
                     </Box>
                 )}
 
-                renderItem={({ item }) => (
-                    <Pressable
-                        onPress={() => onOpenProfile(item)}
-                        android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
-                        // iOS/общий pressed-эффект — лёгкая подсветка строки
-                        _pressed={{ bg: '$background50' }}
-                    >
-                        <Person name={item.name} email={item.email} />
-                    </Pressable>
-                )}
+                // «Блок» начинается с первого элемента и заканчивается последним
+                renderItem={({ item, index, section }) => {
+                    const isFirst = index === 0;
+                    const isLast  = index === section.data.length - 1;
+                    return (
+                        <Box
+                            bg={'#F5F5F5'}
+                            borderTopLeftRadius={isFirst ? 16 : undefined}
+                            borderTopRightRadius={isFirst ? 16 : undefined}
+                            borderBottomLeftRadius={isLast ? 16 : undefined}
+                            borderBottomRightRadius={isLast ? 16 : undefined}
+                        >
+                            <Pressable
+                                onPress={() => onOpenProfile(item)}
+                                android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
+                            >
+                                <Person name={item.name} email={item.email} />
+                            </Pressable>
+                        </Box>
+                    );
+                }}
 
-                // тонкая инсет-линия между элементами, как в iOS/Telegram
+                // Разделитель остаётся как был — рисуется между айтемами внутри «блока»
                 ItemSeparatorComponent={() => (
-                    <Box ml={AVATAR_INSET} height={1} bg="#DBDBDC" />
+                    <HStack height={1} w="100%">
+                        <Box w={AVATAR_INSET} h="100%" bg="#F5F5F5" />
+                        <Box flex={1} h="100%" bg="#DBDBDC" />
+                    </HStack>
                 )}
 
                 ListEmptyComponent={

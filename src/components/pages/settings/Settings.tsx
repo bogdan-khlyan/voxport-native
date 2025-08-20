@@ -82,7 +82,7 @@ export default function Settings() {
     return (
         <ScrollView contentContainerStyle={{ paddingBottom: 24, paddingTop: 60 }}>
             {/* Верхняя "шапка" как в Telegram */}
-            <Box bg="$background50" px="$4" pt="$6" pb="$5" borderBottomWidth="$1" borderColor="$borderLight200">
+            <Box bg="$background50" px="$4" pt="$6" pb="$5">
                 {/* Линия с QR и "Изм." */}
                 <HStack justifyContent="space-between" alignItems="center" mb="$3">
                     <Pressable onPress={() => { /* открой экран QR позже */ }}>
@@ -92,32 +92,37 @@ export default function Settings() {
                     </Pressable>
 
                     <Pressable onPress={() => setEditMode((v) => !v)}>
-                        <Text size="md" color="$primary700">{editMode ? 'Готово' : 'Изм.'}</Text>
+                        <Text
+                            style={{
+                                color: '#007AFF',
+                                textAlign: 'right',
+                                fontSize: 17,
+                                fontStyle: 'normal',
+                                fontWeight: 400,
+                                lineHeight: 22,
+                            }}
+                        >
+                            {editMode ? 'Готово' : 'Изм.'}
+                        </Text>
                     </Pressable>
                 </HStack>
 
                 {/* Аватар, имя, подзаголовок */}
                 <VStack alignItems="center" space="xs">
                     <BaseAvatar fallback={initials(name)} size="xl"/>
-                    <Heading size="xl" mt="$2">{name || 'Без имени'}</Heading>
+                    <Heading
+                        size="xl" mt="$2"
+                        style={{
+                            color: '#000',
+                            textAlign: 'center',
+                            fontSize: 25,
+                            fontStyle: 'normal',
+                            fontWeight: 600,
+                            lineHeight: 'normal',
+                        }}
+                    >{name || 'Без имени'}</Heading>
                     <Text size="sm" color="$textLight500">{email || 'email не указан'}</Text>
                 </VStack>
-            </Box>
-
-            {/* Кнопка "Изменить фотографию" — как плитка */}
-            <Box px="$4" pt="$3">
-                <Pressable onPress={handleChangePhoto}>
-                    <Box
-                        bg="$background0"
-                        borderWidth="$1"
-                        borderColor="$borderLight300"
-                        rounded="$2xl"
-                        px="$4"
-                        py="$3"
-                    >
-                        <Text size="md" color="$primary700">Изменить фотографию</Text>
-                    </Box>
-                </Pressable>
             </Box>
 
             {/* Редактирование полей (показываем только в editMode) */}
@@ -189,10 +194,21 @@ export default function Settings() {
                     variant="outline"
                     action="negative"
                     rounded="$2xl"
+                    style={{
+                        borderColor: 'transparent',
+                        borderRadius: 12,
+                        backgroundColor: 'rgba(255,59,48,0.05)',
+                    }}
                     isDisabled={loading}
                     onPress={logout}
                 >
-                    <ButtonText>{loading ? 'Выход…' : 'Выйти'}</ButtonText>
+                    <ButtonText style={{
+                        color: '#FF3B30',
+                        fontSize: 17,
+                        fontStyle: 'normal',
+                        fontWeight: 400,
+                        lineHeight: 22,
+                    }}>{loading ? 'Выход…' : 'Выйти'}</ButtonText>
                 </Button>
             </Box>
         </ScrollView>
