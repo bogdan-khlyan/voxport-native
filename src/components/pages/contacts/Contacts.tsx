@@ -21,12 +21,16 @@ type Contact = {
 };
 
 const MOCK: Contact[] = [
-    { id: '1', name: 'Alice Johnson', email: 'alice@voxport.app', online: true },
-    { id: '2', name: 'Anton Petrov',  email: 'anton@voxport.app' },
-    { id: '3', name: 'Bogdan Hlyan',  email: 'bogdan@voxport.app', online: true },
-    { id: '4', name: 'Charles Lee',   email: 'charles@voxport.app' },
-    { id: '5', name: 'Diana Kravets', email: 'diana@voxport.app' },
-    { id: '6', name: 'Егор Савченко', email: 'egor@voxport.app', online: true },
+    { id: '1', name: 'Alice Johnson', email: '@kasf', online: true },
+    { id: '2', name: 'Anton Petrov',  email: '@vkssd' },
+    { id: '3', name: 'Bogdan Hlyan',  email: '@ksa', online: true },
+    { id: '4', name: 'Charles Lee',   email: '@jfss' },
+    { id: '5', name: 'Diana Kravets', email: '@link' },
+    { id: '6', name: 'Егор Савченко', email: '@link', online: true },
+    { id: '7', name: 'Петя Савченко', email: '@link', online: true },
+    { id: '8', name: 'Ваня Савченко', email: '@link', online: true },
+    { id: '9', name: 'Катя Савченко', email: '@link', online: true },
+    { id: '10', name: 'Саня Савченко', email: '@link', online: true },
 ];
 
 function groupByInitial(items: Contact[]) {
@@ -125,16 +129,18 @@ const Contacts: React.FC = () => {
                     return (
                         <Box
                             bg={'#F5F5F5'}
-                            borderTopLeftRadius={isFirst ? 16 : undefined}
-                            borderTopRightRadius={isFirst ? 16 : undefined}
-                            borderBottomLeftRadius={isLast ? 16 : undefined}
-                            borderBottomRightRadius={isLast ? 16 : undefined}
+                            borderTopLeftRadius={isFirst ? 10 : undefined}
+                            borderTopRightRadius={isFirst ? 10 : undefined}
+                            borderBottomLeftRadius={isLast ? 10 : undefined}
+                            borderBottomRightRadius={isLast ? 10 : undefined}
                         >
                             <Pressable
                                 onPress={() => onOpenProfile(item)}
                                 android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
                             >
-                                <Person name={item.name} email={item.email} />
+                                {({ pressed }) => (
+                                    <Person name={item.name} email={item.email} pressed={pressed} />
+                                )}
                             </Pressable>
                         </Box>
                     );

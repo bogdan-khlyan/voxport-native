@@ -125,69 +125,6 @@ export default function Settings() {
                 </VStack>
             </Box>
 
-            {/* Редактирование полей (показываем только в editMode) */}
-            {editMode && (
-                <Box px="$4" mt="$4">
-                    <VStack space="md">
-                        <FormControl isInvalid={!!nameErr}>
-                            <FormControlLabel>
-                                <FormControlLabelText>Имя</FormControlLabelText>
-                            </FormControlLabel>
-                            <Input>
-                                <InputField
-                                    value={name}
-                                    onChangeText={setName}
-                                    placeholder="Как к тебе обращаться"
-                                    autoCapitalize="words"
-                                    returnKeyType="next"
-                                />
-                            </Input>
-                            {nameErr ? (
-                                <FormControlError>
-                                    <FormControlErrorText>{nameErr}</FormControlErrorText>
-                                </FormControlError>
-                            ) : null}
-                        </FormControl>
-
-                        <FormControl isInvalid={!!emailErr}>
-                            <FormControlLabel>
-                                <FormControlLabelText>Email</FormControlLabelText>
-                            </FormControlLabel>
-                            <Input>
-                                <InputField
-                                    value={email}
-                                    onChangeText={setEmail}
-                                    placeholder="you@example.com"
-                                    autoCapitalize="none"
-                                    keyboardType="email-address"
-                                    returnKeyType="done"
-                                />
-                            </Input>
-                            {emailErr ? (
-                                <FormControlError>
-                                    <FormControlErrorText>{emailErr}</FormControlErrorText>
-                                </FormControlError>
-                            ) : null}
-                        </FormControl>
-
-                        <HStack space="sm">
-                            <Button
-                                variant="solid"
-                                action="primary"
-                                rounded="$2xl"
-                                isDisabled={!profileValid || savingProfile}
-                                onPress={saveProfile}
-                            >
-                                <ButtonText>{savingProfile ? 'Сохраняю…' : 'Сохранить'}</ButtonText>
-                            </Button>
-                            <Button variant="outline" rounded="$2xl" onPress={cancelEdit}>
-                                <ButtonText>Отмена</ButtonText>
-                            </Button>
-                        </HStack>
-                    </VStack>
-                </Box>
-            )}
-
             {/* Кнопка выхода — скромно внизу */}
             <Box px="$4" mt="$6">
                 <Button

@@ -1,27 +1,22 @@
 import React from 'react';
-import { HStack, VStack, Avatar, AvatarFallbackText, Heading, Text } from '@gluestack-ui/themed';
-import BaseAvatar from "@/components/common/BaseAvatar";
+import { HStack, VStack, Heading, Text } from '@gluestack-ui/themed';
+import BaseAvatar from '@/components/common/BaseAvatar';
 
 type PersonProps = {
     name: string;
     email: string;
+    pressed?: boolean; // <- добавили
 };
 
-const Person: React.FC<PersonProps> = ({ name, email }) => {
-    const initials = name
-        .split(' ')
-        .map((n) => n[0])
-        .join('')
-        .toUpperCase();
-
+const Person: React.FC<PersonProps> = ({ name, email, pressed = false }) => {
     return (
         <HStack
             px="$4"
             py="$3"
             alignItems="center"
             space="md"
-            backgroundColor="#F5F5F5"
             borderRadius="$lg"
+            bg={pressed ? 'rgba(118, 118, 128, 0.10)' : '#F5F5F5'}
         >
             <BaseAvatar fallback="SM" size="sm" />
             <VStack flex={1}>
