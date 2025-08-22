@@ -74,9 +74,9 @@ android {
 
     compileSdkVersion rootProject.ext.compileSdkVersion
 
-    namespace "com.rnsdktester"
+    namespace "com.Voxport"
     defaultConfig {
-        applicationId "com.rnsdktester"
+        applicationId "com.Voxport"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
