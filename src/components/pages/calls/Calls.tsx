@@ -1,25 +1,35 @@
 // src/screens/Calls/Calls.tsx
 import React, { useMemo, useEffect } from 'react';
 import { FlatList } from 'react-native';
-import { Box, VStack, Heading, Center, Text } from '@gluestack-ui/themed';
+import { Box, VStack, Heading, Center, Text, Divider } from '@gluestack-ui/themed';
 import { useNavigation } from '@react-navigation/native';
 import { useDispatch, useSelector } from 'react-redux';
 
 import CallItem, { CallItemData } from './components/CallItem';
-import { hydrateCalls, selectCalls, selectHydrating, CallItem as StoreCallItem } from '@/api/calls/calls.store';
+import {
+    hydrateCalls,
+    selectCalls,
+    selectHydrating,
+    CallItem as StoreCallItem,
+} from '@/api/calls/calls.store';
 
 export default function Calls() {
     const navigation = useNavigation<any>();
     const dispatch = useDispatch();
 
-    const calls = useSelector(selectCalls as any);
-    const hydrating = useSelector(selectHydrating as any);
+    // Явно приводим к ожидаемым типам
+    const calls = useSelector(selectCalls) as StoreCallItem[] | unknown;
+    const hydrating = useSelector(selectHydrating) as boolean;
 
     useEffect(() => {
         dispatch(hydrateCalls() as any);
     }, [dispatch]);
 
-    const data: CallItemData[] = useMemo(() => calls.map(mapStoreCallToUi), [calls]);
+    // Гарантируем массив, даже если селектор вернул unknown/undefined
+    const data: CallItemData[] = useMemo(() => {
+        const arr = Array.isArray(calls) ? (calls as StoreCallItem[]) : [];
+        return arr.map(mapStoreCallToUi);
+    }, [calls]);
 
     return (
         <Box flex={1} bg="$backgroundLight0" pt={60}>
@@ -42,11 +52,15 @@ export default function Calls() {
 
                 {hydrating ? (
                     <Center flex={1} px="$4">
-                        <Text size="md" color="$textLight500">Загружаем историю…</Text>
+                        <Text size="md" color="$textLight500">
+                            Загружаем историю…
+                        </Text>
                     </Center>
                 ) : data.length === 0 ? (
                     <Center flex={1} px="$4">
-                        <Text size="md" color="$textLight500">История звонков пуста</Text>
+                        <Text size="md" color="$textLight500">
+                            История звонков пуста
+                        </Text>
                     </Center>
                 ) : (
                     <FlatList
@@ -65,6 +79,8 @@ export default function Calls() {
                                 onPressRow={() => {}}
                             />
                         )}
+                        // Если захочешь, можно убрать showDivider и раскомментить это:
+                        // ItemSeparatorComponent={() => <Divider ml="$4" />}
                     />
                 )}
             </VStack>
@@ -79,7 +95,8 @@ function mapStoreCallToUi(c: StoreCallItem): CallItemData {
         name: c.peerName,
         username: c.peerId,
         type: c.isVideo ? 'video' : 'audio',
-        status: c.status === 'missed' ? 'missed' : (c.direction === 'in' ? 'incoming' : 'outgoing'),
+        status: c.status === 'missed' ? 'missed' : c.direction === 'in' ? 'incoming' : 'outgoing',
         date: new Date(c.startedAt).toISOString(),
+        durationSec: c.endedAt ? Math.max(0, Math.floor((c.endedAt - c.startedAt) / 1000)) : undefined,
     };
 }
