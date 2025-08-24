@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk, PayloadAction, configureStore } from "@r
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { userService, User, LoginPayload, LoginResponseDTO } from "@/api/user/user.service";
 import { globalStore } from "@/api/global/global.store";
+import callsReducer, { CALLS_SLICE_KEY } from '@/api/calls/calls.store';
 
 type UserState = {
     user: User | null;
@@ -90,6 +91,7 @@ export const { patchUser } = userSlice.actions;
 export const store = configureStore({
     reducer: {
         user: userSlice.reducer,
+        [CALLS_SLICE_KEY]: callsReducer,
     },
 });
 

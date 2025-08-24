@@ -21,6 +21,9 @@ import TabsNav from "./components/layouts/TabsNav";
 import { Provider } from 'react-redux';
 import { store, useUserStore } from './api/user/user.store';
 
+console.log('BOOT', { __DEV__ });
+
+
 const RootStack = createStackNavigator();
 
 // --- Гейт авторизации на Redux ---

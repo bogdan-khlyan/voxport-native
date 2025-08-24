@@ -44,13 +44,13 @@ const ContactActions: React.FC<Props> = ({ onMessage, onCall, onStartMeeting, ha
                 <ActionButton
                     icon={<PhoneIcon size={ICON_SIZE} color="#16a34a" />}
                     label="Звонок"
-                    onPress={onCall}
+                    onPress={onStartMeeting}
                 />
             )}
             <ActionButton
                 icon={<PhoneIcon size={ICON_SIZE} color="#dc2626" />}
                 label="Позвонить"
-                onPress={onStartMeeting}
+                onPress={onCall}
             />
         </HStack>
     );

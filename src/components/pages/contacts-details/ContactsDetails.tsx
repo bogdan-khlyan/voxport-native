@@ -3,11 +3,8 @@ import React from 'react';
 import { Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import {
-    Box, VStack, Center,
-    Heading, Text,
-    Button, ButtonText,
-    Pressable,
-    Actionsheet, ActionsheetBackdrop, ActionsheetContent,
+    Box, VStack, Center, Heading, Text, Button, ButtonText,
+    Pressable, Actionsheet, ActionsheetBackdrop, ActionsheetContent,
     HStack, Spinner,
 } from '@gluestack-ui/themed';
 
@@ -18,34 +15,34 @@ import ContactActions from './components/ContactActions';
 import { useUserStore } from '@/api/user/user.store';
 import type { User } from '@/api/user/user.service';
 
+// ✅ используем thunk-и из slice-only стора
+import { addCall } from '@/api/calls/calls.store';
+import { useDispatch } from 'react-redux';
+
 type ContactRouteParams = {
-    contact?: User;      // можем передать сразу объект
-    contactId?: number;  // или только id — достанем из стора
+    contact?: User;
+    contactId?: number;
 };
 
 const ContactDetails: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>() as { params?: ContactRouteParams };
-
     const { user, hydrating, loading } = useUserStore();
 
+    const dispatch = useDispatch();
     const [menuOpen, setMenuOpen] = React.useState(false);
 
-    // --- достаём "сырой" контакт из параметров
     const rawContact = route.params?.contact;
     const routeId = route.params?.contactId ?? rawContact?.id;
 
-    // --- ищем актуальную версию контакта в сторах по id
     const storeContact = React.useMemo<User | undefined>(() => {
         if (!routeId) return undefined;
         const list = user?.users ?? [];
         return list.find(u => String(u.id) === String(routeId));
     }, [user, routeId]);
 
-    // --- финальный контакт (актуальный из стора, иначе в параметрах)
     const contact = storeContact ?? rawContact;
 
-    // --- состояния отсутствия данных
     if (hydrating || loading) {
         return (
             <Box flex={1} bg="$backgroundLight">
@@ -79,7 +76,6 @@ const ContactDetails: React.FC = () => {
         );
     }
 
-    // --- отображаемые поля
     const displayName = contact.username || contact.link || `#${contact.id}`;
     const handle = contact.link ? `@${contact.link.replace(/^@/, '')}` : '';
     const isOnline = (contact as any).online ?? false;
@@ -91,16 +87,33 @@ const ContactDetails: React.FC = () => {
     }, [displayName]);
 
     const onStartMeeting = () => {
-        const room = `vox-${contact.id}`;
-        navigation.navigate('Meeting', { room });
+        // const room = `vox-${contact.id}`;
+        // navigation.navigate('Meeting', { room });
     };
 
-    const onMessage = () => navigation.navigate('Chat', { contactId: contact.id });
+    const onMessage = () => navigation.navigate('ChatsTab');
 
-    const onCall = () => { /* Linking.openURL(`tel:${phone}`) */ };
+    // ▶ запись в историю звонков через dispatch(thunk)
+    const onCall = React.useCallback(() => {
+        console.log('!!!!')
+        dispatch(addCall({
+            peerId: String(contact.id),
+            peerName: displayName,
+            direction: 'out',
+            isVideo: false,
+
+            // пример: завершённый вызов на 30 сек
+            status: 'completed',
+            startedAt: Date.now() - 30_000,
+            endedAt: Date.now(),
+            durationSec: 30,
+            endReason: 'user_hangup',
+            favorite: true,
+            note: 'Тестовая запись из ContactDetails',
+        }) as any); // если TS ругается на generic-и toolkit — можно оставить as any
+    }, [dispatch, contact.id, displayName]);
 
     const onDeleteContact = () => {
-        // TODO: вызов API удаления (по contact.id)
         navigation.goBack();
     };
 
@@ -118,35 +131,30 @@ const ContactDetails: React.FC = () => {
     return (
         <Box flex={1} bg="$backgroundLight">
             <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-                {/* Топ-бар */}
                 <ContactDetailsHeader onMenuOpen={() => setMenuOpen(true)} />
 
                 <Center px="$4">
                     <VStack w="100%" maxWidth={560}>
-                        {/* Профиль */}
                         <ContactProfile
                             name={displayName}
-                            email={handle}         // показываем @vox как «email/хэндл»
-                            phone={undefined}      // телефона пока нет в User
+                            email={handle}
+                            phone={undefined}
                             online={isOnline}
                             initials={initials}
                         />
 
-                        {/* Разделитель */}
                         <Box height={1} bg="$borderLight200" />
 
-                        {/* Быстрые действия */}
                         <ContactActions
                             onMessage={onMessage}
                             onCall={onCall}
                             onStartMeeting={onStartMeeting}
-                            hasPhone={false}
+                            hasPhone={true}
                         />
                     </VStack>
                 </Center>
             </KeyboardAvoidingView>
 
-            {/* Меню "Ещё" */}
             <Actionsheet isOpen={menuOpen} onClose={() => setMenuOpen(false)}>
                 <ActionsheetBackdrop />
                 <ActionsheetContent>

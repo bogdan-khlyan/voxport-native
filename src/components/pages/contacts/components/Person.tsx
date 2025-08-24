@@ -58,11 +58,9 @@ const Person: React.FC<PersonProps> = ({ user, pressed = false }) => {
                 <Heading size="sm" numberOfLines={1}>
                     {title}
                 </Heading>
-                {subtitle && (
-                    <Text size="xs" color="$textLight500" numberOfLines={1}>
-                        {subtitle}
-                    </Text>
-                )}
+                <Text size="xs" color="$textLight500" numberOfLines={1}>
+                    @{subtitle}
+                </Text>
             </VStack>
         </HStack>
     );
