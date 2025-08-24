@@ -1,3 +1,4 @@
+// ContactDetails.tsx
 import React from 'react';
 import { Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -7,28 +8,56 @@ import {
     Button, ButtonText,
     Pressable,
     Actionsheet, ActionsheetBackdrop, ActionsheetContent,
+    HStack, Spinner,
 } from '@gluestack-ui/themed';
-import ContactDetailsHeader from "./components/ContactsDetailsHeader";
-import ContactProfile from "./components/ContactProfile";
-import ContactActions from "./components/ContactActions";
 
-type Contact = {
-    id: string;
-    name: string;
-    email: string;
-    phone?: string;
-    online?: boolean;
+import ContactDetailsHeader from './components/ContactsDetailsHeader';
+import ContactProfile from './components/ContactProfile';
+import ContactActions from './components/ContactActions';
+
+import { useUserStore } from '@/api/user/user.store';
+import type { User } from '@/api/user/user.service';
+
+type ContactRouteParams = {
+    contact?: User;      // можем передать сразу объект
+    contactId?: number;  // или только id — достанем из стора
 };
-
-type ContactRouteParams = { contact: Contact };
-
-const AVATAR_INSET = 72;
 
 const ContactDetails: React.FC = () => {
     const navigation = useNavigation<any>();
     const route = useRoute<any>() as { params?: ContactRouteParams };
 
-    const contact = route.params?.contact;
+    const { user, hydrating, loading } = useUserStore();
+
+    const [menuOpen, setMenuOpen] = React.useState(false);
+
+    // --- достаём "сырой" контакт из параметров
+    const rawContact = route.params?.contact;
+    const routeId = route.params?.contactId ?? rawContact?.id;
+
+    // --- ищем актуальную версию контакта в сторах по id
+    const storeContact = React.useMemo<User | undefined>(() => {
+        if (!routeId) return undefined;
+        const list = user?.users ?? [];
+        return list.find(u => String(u.id) === String(routeId));
+    }, [user, routeId]);
+
+    // --- финальный контакт (актуальный из стора, иначе в параметрах)
+    const contact = storeContact ?? rawContact;
+
+    // --- состояния отсутствия данных
+    if (hydrating || loading) {
+        return (
+            <Box flex={1} bg="$backgroundLight">
+                <Center flex={1}>
+                    <HStack space="sm" alignItems="center">
+                        <Spinner accessibilityLabel="Загрузка" />
+                        <Text>Загружаем контакт…</Text>
+                    </HStack>
+                </Center>
+            </Box>
+        );
+    }
 
     if (!contact) {
         return (
@@ -36,9 +65,9 @@ const ContactDetails: React.FC = () => {
                 <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
                     <Center flex={1} px="$5">
                         <VStack space="md" alignItems="center">
-                            <Heading size="xl">Контакт не передан</Heading>
+                            <Heading size="xl">Контакт не найден</Heading>
                             <Text textAlign="center">
-                                Экран <Text bold>ContactDetails</Text> требует параметр <Text bold>contact</Text>, но он не был передан.
+                                Экран <Text bold>ContactDetails</Text> ожидает <Text bold>contact</Text> или <Text bold>contactId</Text>.
                             </Text>
                             <Button onPress={() => navigation.goBack()}>
                                 <ButtonText>Назад</ButtonText>
@@ -50,18 +79,16 @@ const ContactDetails: React.FC = () => {
         );
     }
 
-    const [menuOpen, setMenuOpen] = React.useState(false);
+    // --- отображаемые поля
+    const displayName = contact.username || contact.link || `#${contact.id}`;
+    const handle = contact.link ? `@${contact.link.replace(/^@/, '')}` : '';
+    const isOnline = (contact as any).online ?? false;
 
-    const initials = React.useMemo(
-        () =>
-            contact.name
-                .split(' ')
-                .map(n => n[0])
-                .join('')
-                .slice(0, 2)
-                .toUpperCase() || 'NA',
-        [contact.name]
-    );
+    const initials = React.useMemo(() => {
+        const parts = (displayName || '').trim().split(/\s+/);
+        const init = (parts[0]?.[0] ?? '') + (parts[1]?.[0] ?? '');
+        return (init || displayName.slice(0, 2) || 'NA').toUpperCase();
+    }, [displayName]);
 
     const onStartMeeting = () => {
         const room = `vox-${contact.id}`;
@@ -70,10 +97,10 @@ const ContactDetails: React.FC = () => {
 
     const onMessage = () => navigation.navigate('Chat', { contactId: contact.id });
 
-    const onCall = () => { /* Linking.openURL(`tel:${contact.phone}`) */ };
+    const onCall = () => { /* Linking.openURL(`tel:${phone}`) */ };
 
     const onDeleteContact = () => {
-        // TODO: вызов API удаления
+        // TODO: вызов API удаления (по contact.id)
         navigation.goBack();
     };
 
@@ -98,10 +125,10 @@ const ContactDetails: React.FC = () => {
                     <VStack w="100%" maxWidth={560}>
                         {/* Профиль */}
                         <ContactProfile
-                            name={contact.name}
-                            email={contact.email}
-                            phone={contact.phone}
-                            online={contact.online}
+                            name={displayName}
+                            email={handle}         // показываем @vox как «email/хэндл»
+                            phone={undefined}      // телефона пока нет в User
+                            online={isOnline}
                             initials={initials}
                         />
 
@@ -113,9 +140,8 @@ const ContactDetails: React.FC = () => {
                             onMessage={onMessage}
                             onCall={onCall}
                             onStartMeeting={onStartMeeting}
-                            hasPhone={!!contact.phone}
+                            hasPhone={false}
                         />
-
                     </VStack>
                 </Center>
             </KeyboardAvoidingView>
