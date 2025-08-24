@@ -60,7 +60,7 @@ const ContactsHeader: React.FC<Props> = ({
             {/* Поиск + фильтр Online */}
             <VStack space="sm">
                 <BaseInput
-                    placeholder="Поиск по имени или email"
+                    placeholder="Поиск по имени пользователя @vox"
                     value={query}
                     onChangeText={onQueryChange}
                     leftIcon={<Icon as={Search} size="sm" />}

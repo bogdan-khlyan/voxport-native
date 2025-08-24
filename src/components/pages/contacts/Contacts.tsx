@@ -1,46 +1,31 @@
 // Contacts.tsx
-import React, {
-    useMemo,
-    useState,
-    useCallback,
-    useEffect,
-    useRef,
-} from 'react';
+import React, { useMemo, useState, useCallback } from 'react';
 import { SectionList, RefreshControl } from 'react-native';
-import {
-    Box,
-    VStack,
-    HStack,
-    Heading,
-    Text,
-    Pressable,
-    Spinner,
-} from '@gluestack-ui/themed';
+import { Box, VStack, HStack, Heading, Text, Pressable, Spinner } from '@gluestack-ui/themed';
 import { useNavigation } from '@react-navigation/native';
 import ContactsHeader from './components/ContactsHeader';
 import Person from './components/Person';
 import { useUserStore } from '@/api/user/user.store';
+import type { User } from '@/api/user/user.service';
 
-type Contact = {
-    id: string;
-    name: string;
-    email: string;
-    online?: boolean;
-};
-
-function groupByInitial(items: Contact[]) {
-    const map = new Map<string, Contact[]>();
-    for (const c of items) {
-        const ch = (c.name[0] || '#').toUpperCase();
+function groupByInitial(items: User[]) {
+    const map = new Map<string, User[]>();
+    for (const u of items) {
+        const base = u.username || u.link || '';
+        const ch = (base[0] || '#').toUpperCase();
         const key = /[A-ZА-ЯЁ]/i.test(ch) ? ch : '#';
         if (!map.has(key)) map.set(key, []);
-        map.get(key)!.push(c);
+        map.get(key)!.push(u);
     }
     return Array.from(map.entries())
         .sort(([a], [b]) => a.localeCompare(b, 'ru'))
         .map(([title, data]) => ({
             title,
-            data: data.sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+            data: data.sort((a, b) => {
+                const an = a.username || a.link || '';
+                const bn = b.username || b.link || '';
+                return an.localeCompare(bn, 'ru');
+            }),
         }));
 }
 
@@ -52,121 +37,73 @@ export default function Contacts() {
     const [refreshing, setRefreshing] = useState(false);
 
     const navigation = useNavigation<any>();
-    const { user, hydrating, loading, hydrate } = useUserStore();
+    const { user, hydrating, loading } = useUserStore();
 
-    // --- 1) hydrate строго один раз (включая StrictMode) ---
-    const didHydrateRef = useRef(false);
-    useEffect(() => {
-        if (!didHydrateRef.current) {
-            didHydrateRef.current = true;
-            // не await — эффект
-            hydrate();
-        }
-    }, [hydrate]);
-
-    // --- 2) маппим user.relation users -> Contact[] ---
-    const source: Contact[] = useMemo(() => {
-        const list = user?.users ?? [];
-        return list.map((u) => ({
-            id: String(u.id),
-            name: u.username || 'Без имени',
-            email: u.link || u.username || '@user',
-            online: (u as any).online ?? false,
-        }));
-    }, [user]);
-
-    // --- 3) фильтрация + группировка ---
-    const filtered = useMemo(() => {
-        const q = query.trim().toLowerCase();
-        const base = onlyOnline ? source.filter((c) => c.online) : source;
-        return q
-            ? base.filter(
-                (c) =>
-                    c.name.toLowerCase().includes(q) ||
-                    c.email.toLowerCase().includes(q),
-            )
-            : base;
-    }, [query, onlyOnline, source]);
-
-    const sections = useMemo(() => groupByInitial(filtered), [filtered]);
-
-    // --- 4) коллбеки с защитой от «одинаковых» сетов ---
+    // === handlers (стабильные и с защитой от одинаковых значений)
     const handleQueryChange = useCallback((v: string) => {
         const next = (v ?? '').toString();
         setQuery((prev) => (prev === next ? prev : next));
     }, []);
-
     const handleToggleOnline = useCallback((v: boolean) => {
         setOnlyOnline((prev) => (prev === !!v ? prev : !!v));
     }, []);
-
-    const handleInvite = useCallback(
-        () => navigation.navigate('Invite'),
-        [navigation],
-    );
-
+    const handleInvite = useCallback(() => navigation.navigate('Invite'), [navigation]);
     const onOpenProfile = useCallback(
-        (c: Contact) => navigation.navigate('Contact', { contact: c }),
+        (u: User) => navigation.navigate('Contact', { contact: u }),
         [navigation],
     );
-
-    const onRefresh = useCallback(async () => {
+    const onRefresh = useCallback(() => {
         setRefreshing(true);
-        try {
-            await hydrate();
-        } finally {
-            setRefreshing(false);
-        }
-    }, [hydrate]);
+        setTimeout(() => setRefreshing(false), 400);
+    }, []);
 
+    // === source из relation users
+    const source: User[] = useMemo(() => user?.users ?? [], [user]);
+
+    // === фильтрация
+    const filtered: User[] = useMemo(() => {
+        const q = query.trim().toLowerCase();
+        const base = onlyOnline ? source.filter((u) => (u as any).online) : source;
+        if (!q) return base;
+        return base.filter((u) => {
+            const name = (u.username || '').toLowerCase();
+            const link = (u.link || '').toLowerCase();
+            return name.includes(q) || link.includes(q);
+        });
+    }, [query, onlyOnline, source]);
+
+    const sections = useMemo(() => groupByInitial(filtered), [filtered]);
     const isBusy = hydrating || loading;
 
     return (
         <Box flex={1} bg="$backgroundLight" pt="$16">
-            {/* 5) Пока идёт первичная гидратация — не рендерим Header вовсе */}
-            {didHydrateRef.current && !hydrating && (
-                <ContactsHeader
-                    title="Контакты"
-                    count={filtered.length}
-                    query={query}
-                    onQueryChange={handleQueryChange}
-                    onlyOnline={onlyOnline}
-                    onToggleOnline={handleToggleOnline}
-                    onInvite={handleInvite}
-                />
-            )}
+            <ContactsHeader
+                title="Контакты"
+                count={filtered.length}
+                query={query}
+                onQueryChange={handleQueryChange}
+                onlyOnline={onlyOnline}
+                onToggleOnline={handleToggleOnline}
+                onInvite={handleInvite}
+            />
 
-            {/* Если первичная гидратация — покажем спиннер полноэкранно */}
-            {!didHydrateRef.current || hydrating ? (
+
+            {isBusy ? (
                 <HStack mt="$10" justifyContent="center">
                     <Spinner accessibilityLabel="Загрузка" />
                 </HStack>
             ) : (
                 <SectionList
                     sections={sections}
-                    keyExtractor={(item) => item.id}
+                    keyExtractor={(item) => String(item.id)}
                     stickySectionHeadersEnabled
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
-                    refreshControl={
-                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-                    }
-                    contentContainerStyle={{
-                        paddingBottom: 24,
-                        paddingLeft: 16,
-                        paddingRight: 16,
-                    }}
+                    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+                    contentContainerStyle={{ paddingBottom: 24, paddingLeft: 16, paddingRight: 16 }}
                     renderSectionHeader={({ section }) => (
                         <Box bg="$backgroundLight" py="$2">
-                            <Text
-                                sx={{
-                                    color: '#000',
-                                    fontSize: 17,
-                                    fontStyle: 'normal',
-                                    fontWeight: '600',
-                                    lineHeight: 22,
-                                }}
-                            >
+                            <Text sx={{ color: '#000', fontSize: 17, fontWeight: '600', lineHeight: 22 }}>
                                 {section.title}
                             </Text>
                         </Box>
@@ -176,7 +113,7 @@ export default function Contacts() {
                         const isLast = index === section.data.length - 1;
                         return (
                             <Box
-                                bg={'#F5F5F5'}
+                                bg="#F5F5F5"
                                 borderTopLeftRadius={isFirst ? 10 : undefined}
                                 borderTopRightRadius={isFirst ? 10 : undefined}
                                 borderBottomLeftRadius={isLast ? 10 : undefined}
@@ -186,13 +123,7 @@ export default function Contacts() {
                                     onPress={() => onOpenProfile(item)}
                                     android_ripple={{ color: 'rgba(0,0,0,0.06)' }}
                                 >
-                                    {({ pressed }) => (
-                                        <Person
-                                            name={item.name}
-                                            email={item.email}
-                                            pressed={pressed}
-                                        />
-                                    )}
+                                    {({ pressed }) => <Person user={item} pressed={pressed} />}
                                 </Pressable>
                             </Box>
                         );
@@ -204,20 +135,12 @@ export default function Contacts() {
                         </HStack>
                     )}
                     ListEmptyComponent={
-                        isBusy ? (
-                            <HStack mt="$10" justifyContent="center">
-                                <Spinner accessibilityLabel="Загрузка" />
-                            </HStack>
-                        ) : (
-                            <VStack mt="$10" space="sm" alignItems="center">
-                                <Heading size="md" color="$textLight600">
-                                    Контактов нет
-                                </Heading>
-                                <Text color="$textLight500" textAlign="center">
-                                    Создайте контакт или используйте поиск.
-                                </Text>
-                            </VStack>
-                        )
+                        <VStack mt="$10" space="sm" alignItems="center">
+                            <Heading size="md" color="$textLight600">Контактов нет</Heading>
+                            <Text color="$textLight500" textAlign="center" maxWidth={240}>
+                                Пользователя можно найти с помощью его @vox
+                            </Text>
+                        </VStack>
                     }
                     ListFooterComponent={<Box h="$6" />}
                 />
