@@ -1,6 +1,6 @@
 {
-  "name": "Voxport",
-  "version": "0.4.1",
+  "name": "voxport",
+  "version": "0.0.1",
   "private": true,
   "scripts": {
     "android": "react-native run-android",
@@ -23,7 +23,7 @@
     "@react-native-aria/focus": "^0.2.9",
     "@react-native-aria/interactions": "^0.2.16",
     "@react-native-aria/overlays": "^0.3.15",
-    "@react-native-async-storage/async-storage": "1.23.1",
+    "@react-native-async-storage/async-storage": "^1.23.1",
     "@react-native-clipboard/clipboard": "1.14.3",
     "@react-native-community/blur": "^4.4.1",
     "@react-native-community/netinfo": "11.1.0",

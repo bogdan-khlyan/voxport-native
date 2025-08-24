@@ -1,37 +1,45 @@
 // src/services/user.service.ts
-export type LoginPayload = { email: string; password: string };
+import { http, HttpError } from "@/api/fetch.config";
 
-export type UserProfile = {
-    id: string;
-    name: string;
-    email: string;
-    token?: string;
-    refreshToken?: string;
+/** ---- Backend DTOs ---- */
+export type User = {
+    id: number;
+    username: string; // у тебя в ответе email лежит в username
+    link: string;
+    users: User[];
 };
+
+export type LoginResponseDTO = {
+    accessToken: string;
+    refreshToken: string;
+    user: User;
+};
+
+export type LoginPayload = { email: string; password: string };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export const userService = {
-    async login(_: LoginPayload): Promise<UserProfile> {
-        // имитация запроса — можно убрать/уменьшить
-        await sleep(300);
-
-        // ВСЕГДА логиним тестового пользователя
-        return {
-            id: 'test',
-            name: 'voxport',
-            email: 'test@voxport.net',
-            token: 'dev-token',
-        };
+    async login(payload: LoginPayload): Promise<LoginResponseDTO> {
+        const res = await http.post<LoginResponseDTO>("/api/auth/custom-login", {
+            identifier: payload.email,
+            password: payload.password,
+        });
+        return res?.data;
     },
 
     async logout(): Promise<void> {
-        await sleep(200);
+        await sleep(100);
         return;
     },
 
-    async getProfile(token: string): Promise<UserProfile> {
-        await sleep(200);
-        return { id: 'test', name: 'voxport', email: 'test@voxport.net', token };
-    },
+    // async getProfile(token: string): Promise<User> {
+    //     await sleep(100);
+    //     // заглушка пока нет ендпоинта
+    //     return {
+    //         accessToken: 'asd',
+    //         refreshToken: '',
+    //         user: {}
+    //     };
+    // },
 };

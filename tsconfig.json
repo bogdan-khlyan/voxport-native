@@ -3,9 +3,10 @@
   "compilerOptions": {
     "jsx": "react-jsx",
     "allowSyntheticDefaultImports": true,
+    "target": "ES2020",
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "baseUrl": "./src",
     "paths": {
       "@/*": ["*"]

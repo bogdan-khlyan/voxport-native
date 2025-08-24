@@ -1,5 +1,5 @@
 // components/pages/auth/Auth.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { KeyboardAvoidingView, Platform } from 'react-native';
 import {
     Box, VStack, Heading, Text,
@@ -7,9 +7,7 @@ import {
     FormControl, FormControlLabel, FormControlLabelText,
     HStack, Badge, BadgeText, FormControlError, FormControlErrorText
 } from '@gluestack-ui/themed';
-
-// Хук стора
-import { useUserStore } from '@/api/user/user.store'; // скорректируй путь, если нужно
+import { useUserStore } from '@/api/user/user.store';
 
 type Props = { onDone?: () => void };
 
@@ -17,14 +15,22 @@ const Auth: React.FC<Props> = () => {
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
 
-    // берём методы/состояние из стора
     const { login, loading, error } = useUserStore();
 
+    // унифицированный текст ошибки (string | { error: { message } } | HttpError.data)
+    const errorText = useMemo(() => {
+        if (!error) return '';
+        // строка
+        if (typeof error === 'string') return error;
+        // HttpError с .data?.error?.message
+        // или просто объект формата { error: { message } }
+        // @ts-ignore — защищаемся от произвольных структур
+        return error?.error?.message || error?.message || 'Ошибка';
+    }, [error]);
+
     const handleSubmit = () => {
-        // Принимаем любые креды — просто инициируем login(thunk).
-        // Сервис вернёт тестового пользователя voxport/test@voxport.net.
+        console.log('!@E#!@$#@!$')
         login({ email: email || 'any@any', password: name || 'any' });
-        // onDone не нужен: редирект произойдёт через RootGate по isAuthed из стора
     };
 
     return (
@@ -71,10 +77,12 @@ const Auth: React.FC<Props> = () => {
                             </Input>
                         </FormControl>
 
-                        {error ? (
-                            <FormControlError>
-                                <FormControlErrorText>{String(error)}</FormControlErrorText>
-                            </FormControlError>
+                        {errorText ? (
+                            <FormControl isInvalid>
+                                <FormControlError>
+                                    <FormControlErrorText>{errorText}</FormControlErrorText>
+                                </FormControlError>
+                            </FormControl>
                         ) : null}
                     </VStack>
 

@@ -1,48 +1,61 @@
 import { createSlice, createAsyncThunk, PayloadAction, configureStore } from "@reduxjs/toolkit";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { userService, UserProfile } from "./user.service";
-
-export const STORAGE_KEYS = { PROFILE: "voxport:profile" } as const;
+import { userService, User, LoginPayload, LoginResponseDTO } from "@/api/user/user.service";
+import { globalStore } from "@/api/global/global.store";
 
 type UserState = {
-    profile: UserProfile | null;
+    user: User | null;
     hydrating: boolean;
     loading: boolean;
     error?: string;
 };
 
+const USER_KEY = "voxport:user";
+
 const initialState: UserState = {
-    profile: null,
+    user: null,
     hydrating: true,
     loading: false,
 };
 
 // --- Thunks ---
-export const hydrateUser = createAsyncThunk<UserProfile | null>(
+export const hydrateUser = createAsyncThunk<User | null>(
     "user/hydrate",
     async () => {
-        const raw = await AsyncStorage.getItem(STORAGE_KEYS.PROFILE);
+        const raw = await AsyncStorage.getItem(USER_KEY);
         if (!raw) return null;
-        return JSON.parse(raw) as UserProfile;
+        return JSON.parse(raw) as User;
     }
 );
 
-export const login = createAsyncThunk<UserProfile, { email: string; password: string }>(
+export const login = createAsyncThunk<User, LoginPayload>(
     "user/login",
-    async ({ email, password }, { rejectWithValue }) => {
+    async (payload, { rejectWithValue }) => {
         try {
-            const profile = await userService.login({ email, password });
-            await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(profile));
-            return profile;
+            const { accessToken, refreshToken, user }: LoginResponseDTO = await userService.login(payload);
+
+            // токены и базовые данные в глобальный стор
+            await globalStore.setAuth({
+                accessToken,
+                refreshToken,
+                userId: user.id,
+                email: user.username, // у тебя email приходит в username
+            });
+
+            // сохраняем user
+            await AsyncStorage.setItem(USER_KEY, JSON.stringify(user));
+
+            return user;
         } catch (err: any) {
-            return rejectWithValue(err.message || "Ошибка авторизации");
+            return rejectWithValue(err?.message || "Ошибка авторизации");
         }
     }
 );
 
 export const logout = createAsyncThunk("user/logout", async () => {
     await userService.logout();
-    await AsyncStorage.removeItem(STORAGE_KEYS.PROFILE);
+    await AsyncStorage.removeItem(USER_KEY);
+    await globalStore.clearAuth();
 });
 
 // --- Slice ---
@@ -50,33 +63,30 @@ const userSlice = createSlice({
     name: "user",
     initialState,
     reducers: {
-        patchProfile(state, action: PayloadAction<Partial<UserProfile>>) {
-            if (state.profile) Object.assign(state.profile, action.payload);
+        patchUser(state, action: PayloadAction<Partial<User>>) {
+            if (state.user) Object.assign(state.user, action.payload);
         },
     },
     extraReducers: (builder) => {
         builder
-            // hydrate
             .addCase(hydrateUser.pending, (s) => { s.hydrating = true; })
             .addCase(hydrateUser.fulfilled, (s, { payload }) => {
-                s.profile = payload;
+                s.user = payload;
                 s.hydrating = false;
             })
             .addCase(hydrateUser.rejected, (s) => { s.hydrating = false; })
 
-            // login
             .addCase(login.pending, (s) => { s.loading = true; s.error = undefined; })
-            .addCase(login.fulfilled, (s, { payload }) => { s.profile = payload; s.loading = false; })
+            .addCase(login.fulfilled, (s, { payload }) => { s.user = payload; s.loading = false; })
             .addCase(login.rejected, (s, { payload }) => { s.loading = false; s.error = payload as string; })
 
-            // logout
-            .addCase(logout.fulfilled, (s) => { s.profile = null; });
+            .addCase(logout.fulfilled, (s) => { s.user = null; });
     },
 });
 
-export const { patchProfile } = userSlice.actions;
+export const { patchUser } = userSlice.actions;
 
-// ---------- ЕДИНЫЙ STORE ----------
+// ---------- STORE ----------
 export const store = configureStore({
     reducer: {
         user: userSlice.reducer,
@@ -89,60 +99,47 @@ export type AppDispatch = typeof store.dispatch;
 // ---------- Селекторы ----------
 export const selectors = {
     userState: (s: RootState) => s.user,
-    profile: (s: RootState) => s.user.profile,
+    user:      (s: RootState) => s.user.user,
     hydrating: (s: RootState) => s.user.hydrating,
-    loading: (s: RootState) => s.user.loading,
-    error: (s: RootState) => s.user.error,
-    isAuthed: (s: RootState) => !!s.user.profile,
+    loading:   (s: RootState) => s.user.loading,
+    error:     (s: RootState) => s.user.error,
+    isAuthed:  (s: RootState) => !!s.user.user,
 };
 
 // ---------- Pinia-подобный фасад ----------
 export const userStore = {
-    // реактивности как в Pinia нет, но можно читать актуальное состояние
-    get state() {
-        return selectors.userState(store.getState());
-    },
-    get profile() {
-        return selectors.profile(store.getState());
-    },
-    get loading() {
-        return selectors.loading(store.getState());
-    },
-    get hydrating() {
-        return selectors.hydrating(store.getState());
-    },
-    get error() {
-        return selectors.error(store.getState());
-    },
+    get state()     { return selectors.userState(store.getState()); },
+    get user()      { return selectors.user(store.getState()); },
+    get loading()   { return selectors.loading(store.getState()); },
+    get hydrating() { return selectors.hydrating(store.getState()); },
+    get error()     { return selectors.error(store.getState()); },
 
-    // методы
     hydrate: () => store.dispatch(hydrateUser()),
-    login: (creds: { email: string; password: string }) => store.dispatch(login(creds)).unwrap(),
-    logout: () => store.dispatch(logout()),
-    patchProfile: (patch: Partial<UserProfile>) => store.dispatch(patchProfile(patch)),
+    login:   (creds: LoginPayload) => store.dispatch(login(creds)).unwrap(),
+    logout:  () => store.dispatch(logout()),
+    patch:   (patch: Partial<User>) => store.dispatch(patchUser(patch)),
 
-    // подписка на изменения (например, для side-effects вне React)
     subscribe: (listener: () => void) => store.subscribe(listener),
 };
 
-// ---------- React-хук в стиле Pinia useStore ----------
+// ---------- React-хук ----------
 import { useDispatch, useSelector } from "react-redux";
 import { useMemo } from "react";
 
 export const useUserStore = () => {
-    const dispatch = useDispatch<AppDispatch>();
-    const profile = useSelector(selectors.profile);
+    const dispatch  = useDispatch<AppDispatch>();
+    const user      = useSelector(selectors.user);
     const hydrating = useSelector(selectors.hydrating);
-    const loading = useSelector(selectors.loading);
-    const error = useSelector(selectors.error);
-    const isAuthed = useSelector(selectors.isAuthed);
+    const loading   = useSelector(selectors.loading);
+    const error     = useSelector(selectors.error);
+    const isAuthed  = useSelector(selectors.isAuthed);
 
     const actions = useMemo(() => ({
         hydrate: () => dispatch(hydrateUser()),
-        login: (creds: { email: string; password: string }) => dispatch(login(creds)),
-        logout: () => dispatch(logout()),
-        patchProfile: (patch: Partial<UserProfile>) => dispatch(patchProfile(patch)),
+        login:   (creds: LoginPayload) => dispatch(login(creds)),
+        logout:  () => dispatch(logout()),
+        patch:   (patch: Partial<User>) => dispatch(patchUser(patch)),
     }), [dispatch]);
 
-    return { profile, hydrating, loading, error, isAuthed, ...actions };
+    return { user, hydrating, loading, error, isAuthed, ...actions };
 };
